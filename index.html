@@ -1,0 +1,2287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>LexiSync — AI 智能背单词与多端同步</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+    body {
+      font-family: var(--font-sans);
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .score-ring {
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .diff-highlight {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border-radius: 3px;
+      padding: 0 2px;
+      font-weight: 700;
+    }
+    .fade-in-up {
+      animation: fadeInUp 0.25s ease-out forwards;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Custom thin scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Navigation -->
+  <header class="sticky top-0 z-30 glass-nav border-b border-slate-200/80">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+        </div>
+        <div class="truncate">
+          <span class="font-bold text-slate-900 tracking-tight text-base">LexiSync</span>
+          <span class="hidden sm:inline-block ml-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">AI 语义判分 · 多端同步</span>
+        </div>
+      </div>
+
+      <!-- Desktop Tabs -->
+      <nav class="hidden md:flex items-center bg-slate-100/90 p-1 rounded-xl gap-0.5" aria-label="主导航">
+        <button data-tab="study" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5">
+          <i data-lucide="book-open" class="w-4 h-4"></i>背单词
+        </button>
+        <button data-tab="mistakes" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>错题与易混
+          <span id="nav-mistake-badge" class="hidden text-[11px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-semibold">0</span>
+        </button>
+        <button data-tab="wordbook" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5">
+          <i data-lucide="library" class="w-4 h-4"></i>词表管理
+        </button>
+        <button data-tab="sync" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5">
+          <i data-lucide="cloud" class="w-4 h-4"></i>同步与AI设置
+        </button>
+      </nav>
+
+      <!-- Sync Status Pill -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="header-sync-btn" type="button" title="立即同步" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors">
+          <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="sync-status-text" class="hidden sm:inline">本地就绪</span>
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 pt-5 pb-24 md:pb-10">
+
+    <!-- ==================== VIEW 1: STUDY ==================== -->
+    <section id="view-study" class="view-section space-y-5">
+      <!-- Top Bar: Mode Filter & Quick Stats -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-1.5" id="study-mode-bar">
+          <button data-mode="all" class="mode-pill px-3 py-1.5 rounded-full text-xs font-semibold transition-all">全部待背</button>
+          <button data-mode="confused" class="mode-pill px-3 py-1.5 rounded-full text-xs font-semibold transition-all">易混词专项</button>
+          <button data-mode="wrong" class="mode-pill px-3 py-1.5 rounded-full text-xs font-semibold transition-all">不会 / 错误</button>
+          <button data-mode="partial" class="mode-pill px-3 py-1.5 rounded-full text-xs font-semibold transition-all">高频义待补</button>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span class="flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-500"></i>已掌握 <strong id="stat-mastered" class="text-slate-800">0</strong></span>
+          <span class="flex items-center gap-1"><i data-lucide="shuffle" class="w-3.5 h-3.5 text-purple-500"></i>易混 <strong id="stat-confused" class="text-slate-800">0</strong></span>
+          <span class="flex items-center gap-1"><i data-lucide="flame" class="w-3.5 h-3.5 text-amber-500"></i>今日已练 <strong id="stat-today" class="text-slate-800">0</strong></span>
+        </div>
+      </div>
+
+      <!-- Quick Demo Tip Bar (Dismissible) -->
+      <div id="demo-tip-banner" class="bg-indigo-50/80 border border-indigo-200/80 rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs text-indigo-900">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="inline-flex items-center gap-1 font-semibold text-indigo-700"><i data-lucide="wand-2" class="w-3.5 h-3.5"></i>快速体验 AI 评判：</span>
+          <span>当前词 <strong class="font-mono">assess</strong> 试着输入 <button type="button" id="try-assess-btn" class="underline font-semibold text-indigo-700 hover:text-indigo-900">“通过”</button>（触发记混 0 分检测）；或切换</span>
+          <button type="button" id="jump-contribute-btn" class="underline font-semibold text-indigo-700 hover:text-indigo-900">contribute</button>
+          <span>输入 <strong class="font-semibold">“贡献”</strong>（触发 70% 高频义提示）。</span>
+        </div>
+        <button id="dismiss-tip-btn" type="button" class="text-indigo-400 hover:text-indigo-700 p-1" aria-label="关闭提示">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Empty Queue State -->
+      <div id="study-empty-state" class="hidden bg-white rounded-3xl border border-slate-200 p-10 text-center space-y-4 shadow-sm">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <i data-lucide="party-popper" class="w-7 h-7"></i>
+        </div>
+        <h2 class="text-lg font-bold text-slate-900">当前筛选队列已全部完成</h2>
+        <p class="text-sm text-slate-500 max-w-md mx-auto">你可以切换到「全部待背」继续复习，或前往「词表管理」导入你的个人英语单词表。</p>
+        <div class="flex justify-center gap-2 pt-1">
+          <button id="reset-mode-all-btn" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">查看全部词库</button>
+          <button id="go-import-from-empty-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200">导入单词表</button>
+        </div>
+      </div>
+
+      <!-- Main Flashcard -->
+      <div id="study-card" class="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <!-- Progress bar -->
+        <div class="h-1.5 w-full bg-slate-100">
+          <div id="study-progress-bar" class="h-full bg-indigo-600 transition-all duration-300" style="width: 10%"></div>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-6">
+          <!-- Card Header: Index, Status Tags, Audio -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="card-counter" class="text-xs font-semibold text-slate-400 font-mono">1 / 16</span>
+              <span id="card-status-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">新词</span>
+              <span id="card-ai-engine-badge" class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">内置智能评判</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button id="prev-word-btn" type="button" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="上一个">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              </button>
+              <button id="next-word-skip-btn" type="button" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="下一个">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Word Display -->
+          <div class="text-center py-2 space-y-3">
+            <h1 id="card-word" class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 select-all">assess</h1>
+            <div class="flex items-center justify-center gap-3 text-slate-500">
+              <span id="card-phonetic" class="text-sm sm:text-base font-mono text-slate-500">/əˈses/</span>
+              <span id="card-pos" class="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">v.</span>
+              <button id="speak-word-btn" type="button" class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">
+                <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>朗读
+              </button>
+            </div>
+          </div>
+
+          <!-- Input Form -->
+          <form id="answer-form" class="max-w-xl mx-auto space-y-3">
+            <div class="relative">
+              <input
+                id="answer-input"
+                type="text"
+                autocomplete="off"
+                placeholder="输入你记住的中文释义（回车提交 AI 匹配评判）..."
+                class="w-full px-4 py-3.5 pr-24 rounded-2xl border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-base text-slate-900 placeholder:text-slate-400 transition-all"
+              />
+              <button
+                id="submit-answer-btn"
+                type="submit"
+                class="absolute right-2 top-2 bottom-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors flex items-center gap-1.5"
+              >
+                <span id="submit-btn-text">评判</span>
+                <i data-lucide="corner-down-left" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 text-xs">
+              <button id="dont-know-btn" type="button" class="px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 font-semibold transition-colors flex items-center gap-1.5">
+                <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>完全不会（记录并看答案）
+              </button>
+              <button id="show-hint-btn" type="button" class="px-3 py-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors flex items-center gap-1">
+                <i data-lucide="lightbulb" class="w-3.5 h-3.5"></i>例句提示
+              </button>
+            </div>
+
+            <!-- Example Hint Box -->
+            <div id="example-hint-box" class="hidden p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-sm text-slate-700">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">语境例句</span>
+              <p id="card-example-en" class="font-medium text-slate-800"></p>
+            </div>
+          </form>
+
+          <!-- ==================== AI EVALUATION RESULT PANEL ==================== -->
+          <div id="eval-panel" class="hidden max-w-2xl mx-auto pt-2 space-y-4 fade-in-up">
+            <!-- Score & Assessment Card -->
+            <div id="eval-main-card" class="rounded-2xl border p-5 space-y-4">
+              <div class="flex items-start gap-4">
+                <!-- Circular Score Gauge -->
+                <div class="relative w-16 h-16 shrink-0 flex items-center justify-center">
+                  <svg class="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="#e2e8f0" stroke-width="6"></circle>
+                    <circle id="eval-score-ring" class="score-ring" cx="32" cy="32" r="26" fill="none" stroke="#4f46e5" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.36" stroke-dashoffset="163.36"></circle>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span id="eval-score-num" class="text-base font-extrabold text-slate-900">0%</span>
+                  </div>
+                </div>
+
+                <!-- Summary & Feedback -->
+                <div class="flex-1 min-w-0 space-y-1.5">
+                  <div class="flex items-center flex-wrap gap-2">
+                    <span id="eval-verdict-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full">AI 评估</span>
+                    <span id="eval-user-input-echo" class="text-xs text-slate-500"></span>
+                  </div>
+                  <p id="eval-feedback-text" class="text-sm text-slate-800 leading-relaxed font-medium"></p>
+                  <div id="eval-freq-tip" class="hidden mt-2 p-3 rounded-xl bg-amber-50 border border-amber-200/80 text-xs text-amber-900 leading-relaxed flex items-start gap-2">
+                    <i data-lucide="star" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                    <span id="eval-freq-tip-text"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Standard Reference Meaning -->
+              <div class="pt-3 border-t border-slate-200/70 grid sm:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span class="text-xs font-semibold text-slate-400 block mb-0.5">标准释义</span>
+                  <p id="eval-correct-meaning" class="font-semibold text-slate-900"></p>
+                </div>
+                <div id="eval-highfreq-wrap">
+                  <span class="text-xs font-semibold text-indigo-500 block mb-0.5">高频核心考点义</span>
+                  <p id="eval-highfreq-meaning" class="font-semibold text-indigo-900"></p>
+                </div>
+              </div>
+
+              <!-- Example Translation -->
+              <div id="eval-example-wrap" class="p-3 rounded-xl bg-white/80 border border-slate-200/60 text-xs space-y-1">
+                <p id="eval-example-en" class="text-slate-800 font-medium"></p>
+                <p id="eval-example-zh" class="text-slate-500"></p>
+              </div>
+            </div>
+
+            <!-- Confused Words Section (Shown when confused or close lookalikes detected) -->
+            <div id="eval-confused-section" class="hidden rounded-2xl border border-purple-200 bg-purple-50/60 p-5 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 text-purple-900 font-bold text-sm">
+                  <i data-lucide="git-compare" class="w-4 h-4 text-purple-600"></i>
+                  <span>可能与以下单词搞混（已自动记入易混词档案）</span>
+                </div>
+              </div>
+              <div id="eval-confused-list" class="space-y-2.5"></div>
+            </div>
+
+            <!-- Manual Record Override & Next Action -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs text-slate-400 mr-1">标记为：</span>
+                <button type="button" data-mark="dont_know" class="manual-mark-btn px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 transition-colors">不会</button>
+                <button type="button" data-mark="wrong" class="manual-mark-btn px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-colors">错误</button>
+                <button type="button" data-mark="confused" class="manual-mark-btn px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-colors">记混</button>
+                <button type="button" data-mark="mastered" class="manual-mark-btn px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-colors">已掌握</button>
+              </div>
+              <button id="next-word-btn" type="button" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+                <span>下一个单词</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Word Strip for Demo / Rapid Jump -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-4">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="text-xs font-semibold text-slate-500">当前队列词汇（点击可跳转测试）</span>
+          <span id="queue-count-label" class="text-xs text-slate-400"></span>
+        </div>
+        <div id="queue-word-chips" class="flex flex-wrap gap-1.5"></div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: MISTAKES & CONFUSED ==================== -->
+    <section id="view-mistakes" class="view-section hidden space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">错题与易混词本</h2>
+          <p class="text-xs text-slate-500 mt-0.5">自动归档「不会」「错误」「与其他单词记混」以及「高频义遗漏」的词条</p>
+        </div>
+        <button id="practice-mistakes-btn" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-1.5 shadow-sm">
+          <i data-lucide="play" class="w-4 h-4"></i>专项重测当前分类
+        </button>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button type="button" data-mfilter="confused" class="mfilter-card text-left p-4 rounded-2xl bg-white border-2 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-purple-600">记混词</span>
+            <i data-lucide="git-compare" class="w-4 h-4 text-purple-500"></i>
+          </div>
+          <div id="count-confused" class="text-2xl font-extrabold text-slate-900 mt-1">0</div>
+        </button>
+        <button type="button" data-mfilter="dont_know" class="mfilter-card text-left p-4 rounded-2xl bg-white border-2 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-rose-600">不会</span>
+            <i data-lucide="help-circle" class="w-4 h-4 text-rose-500"></i>
+          </div>
+          <div id="count-dont-know" class="text-2xl font-extrabold text-slate-900 mt-1">0</div>
+        </button>
+        <button type="button" data-mfilter="wrong" class="mfilter-card text-left p-4 rounded-2xl bg-white border-2 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-orange-600">答错</span>
+            <i data-lucide="x-circle" class="w-4 h-4 text-orange-500"></i>
+          </div>
+          <div id="count-wrong" class="text-2xl font-extrabold text-slate-900 mt-1">0</div>
+        </button>
+        <button type="button" data-mfilter="partial" class="mfilter-card text-left p-4 rounded-2xl bg-white border-2 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-amber-600">高频义缺失</span>
+            <i data-lucide="star" class="w-4 h-4 text-amber-500"></i>
+          </div>
+          <div id="count-partial" class="text-2xl font-extrabold text-slate-900 mt-1">0</div>
+        </button>
+      </div>
+
+      <!-- Mistake List -->
+      <div id="mistakes-list" class="space-y-3"></div>
+    </section>
+
+    <!-- ==================== VIEW 3: WORDBOOK MANAGEMENT ==================== -->
+    <section id="view-wordbook" class="view-section hidden space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">个人单词表管理</h2>
+          <p class="text-xs text-slate-500 mt-0.5">支持批量粘贴或导入 CSV / TXT / JSON，自定义你的专属英语词库</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="open-import-modal-btn" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="upload" class="w-4 h-4"></i>导入单词表
+          </button>
+          <button id="open-add-word-modal-btn" type="button" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium flex items-center gap-1.5">
+            <i data-lucide="plus" class="w-4 h-4"></i>单个添加
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Filter -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="relative flex-1 min-w-[200px]">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <input id="wordbook-search" type="text" placeholder="搜索英文单词或中文释义..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:border-indigo-500 outline-none" />
+        </div>
+        <select id="wordbook-status-filter" class="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 outline-none">
+          <option value="all">全部状态</option>
+          <option value="new">新词</option>
+          <option value="mastered">已掌握</option>
+          <option value="partial">高频义待补</option>
+          <option value="confused">易混词</option>
+          <option value="wrong">答错</option>
+          <option value="dont_know">不会</option>
+        </select>
+        <button id="export-csv-btn" type="button" class="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-sm text-slate-700 font-medium flex items-center gap-1.5">
+          <i data-lucide="download" class="w-4 h-4"></i>导出 CSV
+        </button>
+      </div>
+
+      <!-- Word Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-50/90 border-b border-slate-200 text-xs font-semibold text-slate-500">
+                <th class="py-3 px-4">单词</th>
+                <th class="py-3 px-4">释义与高频考点</th>
+                <th class="py-3 px-4">状态 / 最近评分</th>
+                <th class="py-3 px-4 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="wordbook-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 4: SYNC & AI SETTINGS ==================== -->
+    <section id="view-sync" class="view-section hidden space-y-6">
+      <div>
+        <h2 class="text-xl font-bold text-slate-900">多端同步与 AI 评判引擎设置</h2>
+        <p class="text-xs text-slate-500 mt-0.5">一套网页同时运行在你的两台 Windows 和两台安卓设备上，按单词最新时间戳增量合并进度</p>
+      </div>
+
+      <!-- Device Info Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <i data-lucide="smartphone" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-slate-900">当前设备：</span>
+              <input id="device-name-input" type="text" class="text-sm font-semibold text-indigo-700 bg-indigo-50/70 px-2.5 py-0.5 rounded-lg border border-transparent focus:border-indigo-400 outline-none w-44" />
+            </div>
+            <p id="last-sync-meta" class="text-xs text-slate-500 mt-1">上次同步：尚未云同步（数据已自动保存在本机浏览器）</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="sync-now-btn" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-1.5">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>立即双向同步
+          </button>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-5">
+        <!-- Cloud Sync Provider Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="cloud" class="w-4 h-4 text-indigo-600"></i>多端同步方式
+            </h3>
+            <span class="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">支持 4 端自动合并</span>
+          </div>
+
+          <!-- Provider Selector -->
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" data-provider="supabase" class="sync-provider-btn px-3 py-2 rounded-xl border text-xs font-semibold transition-all">Supabase 云</button>
+            <button type="button" data-provider="onedrive" class="sync-provider-btn px-3 py-2 rounded-xl border text-xs font-semibold transition-all">OneDrive 网盘</button>
+            <button type="button" data-provider="webdav" class="sync-provider-btn px-3 py-2 rounded-xl border text-xs font-semibold transition-all">WebDAV 网盘</button>
+          </div>
+
+          <!-- Supabase Config -->
+          <div id="cfg-supabase" class="sync-cfg-panel space-y-3 text-xs">
+            <p class="text-slate-500 leading-relaxed">免费额度极高，最适合 Windows + 安卓四端无缝同步。在四台设备上填入相同配置与同步口令即可。</p>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Supabase Project URL</label>
+              <input id="sb-url" type="url" placeholder="https://xxxx.supabase.co" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Anon Public Key</label>
+              <input id="sb-key" type="password" placeholder="eyJhbGciOi..." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">个人同步口令（Sync ID，四端填一致）</label>
+              <input id="sb-sync-id" type="text" placeholder="例如：my-vocab-sync-2026" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-slate-700">首次使用：在 Supabase SQL Editor 执行建表语句</span>
+                <button id="copy-sql-btn" type="button" class="text-indigo-600 hover:text-indigo-800 font-semibold">复制 SQL</button>
+              </div>
+              <pre id="supabase-sql-code" class="text-[11px] font-mono text-slate-600 overflow-x-auto whitespace-pre-wrap">create table if not exists vocab_sync (
+  sync_id text primary key,
+  payload jsonb not null,
+  updated_at timestamptz default now()
+);
+alter table vocab_sync enable row level security;
+create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with check (true);</pre>
+            </div>
+          </div>
+
+          <!-- OneDrive Config -->
+          <div id="cfg-onedrive" class="sync-cfg-panel hidden space-y-3 text-xs">
+            <p class="text-slate-500 leading-relaxed">通过 Microsoft Graph API 将同步文件 <code class="font-mono bg-slate-100 px-1 rounded">lexisync_data.json</code> 直接存入你的个人 OneDrive（不经过任何第三方服务器）。</p>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">OneDrive Graph Access Token</label>
+              <input id="od-token" type="password" placeholder="粘贴 Microsoft Graph Explorer 或 Azure 应用获取的 Bearer Token" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">同步文件路径</label>
+              <input id="od-path" type="text" value="/me/drive/root:/LexiSync/lexisync_data.json:/content" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
+            </div>
+            <div class="p-3 rounded-xl bg-blue-50/70 border border-blue-200/70 text-blue-900 leading-relaxed">
+              提示：在 Microsoft Graph Explorer 登录个人微软账号并勾选 <code class="font-mono">Files.ReadWrite</code> 即可快速获取令牌；若长期免登录刷新，建议部署到静态托管并配置 Azure AD SPA Client ID。
+            </div>
+          </div>
+
+          <!-- WebDAV Config -->
+          <div id="cfg-webdav" class="sync-cfg-panel hidden space-y-3 text-xs">
+            <p class="text-slate-500 leading-relaxed">兼容坚果云、Nextcloud、Alist 等支持 HTTPS WebDAV 的网盘。</p>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">WebDAV 文件完整 URL</label>
+              <input id="wd-url" type="url" placeholder="https://dav.jianguoyun.com/dav/LexiSync/data.json" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">账号</label>
+                <input id="wd-user" type="text" placeholder="邮箱/用户名" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">应用专用密码</label>
+                <input id="wd-pass" type="password" placeholder="应用密码" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+              </div>
+            </div>
+            <p class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200">注意：部分网盘（如坚果云）在浏览器端直接请求可能受跨域限制，如遇同步失败建议优先使用 Supabase 云同步或配置轻量 Cloudflare Worker 代理。</p>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+            <button id="save-sync-cfg-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">保存同步配置</button>
+            <div class="flex items-center gap-2">
+              <button id="export-json-btn" type="button" class="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700">导出 JSON 备份</button>
+              <label class="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 cursor-pointer">
+                导入备份
+                <input id="import-json-input" type="file" accept=".json" class="hidden" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Evaluation Engine Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="cpu" class="w-4 h-4 text-indigo-600"></i>AI 语义评判引擎
+            </h3>
+            <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+              <input id="ai-enable-toggle" type="checkbox" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+              启用外部大模型 API
+            </label>
+          </div>
+
+          <p class="text-xs text-slate-500 leading-relaxed">
+            未启用外部 API 时，将自动使用<strong>内置语义与形近词记混检测引擎</strong>（支持 0–100% 匹配度、高频核心义缺失提示、形近词混淆比对）。启用后，可接入 DeepSeek / 通义千问 / OpenAI 等任意 OpenAI 兼容接口进行深度语义评判。
+          </p>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">API Base URL（OpenAI 兼容接口）</label>
+              <input id="ai-base-url" type="url" placeholder="https://api.deepseek.com/v1" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">API Key（仅保存在本机浏览器）</label>
+              <input id="ai-api-key" type="password" placeholder="sk-..." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">模型名称 (Model)</label>
+              <input id="ai-model" type="text" placeholder="deepseek-chat / gpt-4o-mini / qwen-plus" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+            <button id="save-ai-cfg-btn" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">保存 AI 配置</button>
+            <button id="reset-demo-data-btn" type="button" class="px-3 py-2 rounded-xl text-xs font-medium text-rose-600 hover:bg-rose-50">重置示例词库</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deployment Tip for 2 Windows + 2 Android -->
+      <div class="bg-slate-900 text-slate-100 rounded-2xl p-5 space-y-2 text-xs">
+        <div class="font-bold text-sm flex items-center gap-2 text-white">
+          <i data-lucide="monitor-smartphone" class="w-4 h-4 text-indigo-400"></i>如何在两台 Windows 和两台安卓设备上像 App 一样使用？
+        </div>
+        <p class="text-slate-300 leading-relaxed">
+          将本单文件 HTML 重命名为 <code class="font-mono text-indigo-300">index.html</code> 上传到免费的 <strong>Cloudflare Pages / GitHub Pages / Vercel</strong> 获得专属 HTTPS 网址。在 Windows 的 Chrome/Edge 地址栏点击「安装应用」，在安卓 Chrome/Edge 菜单点击「添加到主屏幕」，即可在四台设备上获得全屏独立 App 体验，并通过上方云同步保持进度一致。
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 glass-nav border-t border-slate-200 px-2 py-1.5 grid grid-cols-4 gap-1" aria-label="移动端导航">
+    <button data-tab="study" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium">
+      <i data-lucide="book-open" class="w-5 h-5 mb-0.5"></i>背单词
+    </button>
+    <button data-tab="mistakes" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium relative">
+      <i data-lucide="alert-triangle" class="w-5 h-5 mb-0.5"></i>错题易混
+    </button>
+    <button data-tab="wordbook" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium">
+      <i data-lucide="library" class="w-5 h-5 mb-0.5"></i>词表
+    </button>
+    <button data-tab="sync" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium">
+      <i data-lucide="cloud" class="w-5 h-5 mb-0.5"></i>同步设置
+    </button>
+  </nav>
+
+  <!-- ==================== MODAL: IMPORT WORDBOOK ==================== -->
+  <div id="import-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900">批量导入你的英语单词表</h3>
+        <button id="close-import-modal" type="button" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <p class="text-xs text-slate-500 leading-relaxed">
+        每行一个单词，支持 <code class="font-mono bg-slate-100 px-1 rounded">单词, 释义</code>、<code class="font-mono bg-slate-100 px-1 rounded">单词[Tab]释义</code> 或 <code class="font-mono bg-slate-100 px-1 rounded">单词, 释义, 高频考点义, 例句</code>。也可以直接上传 CSV / TXT 文件。
+      </p>
+      <div class="flex items-center gap-2">
+        <label class="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5">
+          <i data-lucide="file-up" class="w-4 h-4"></i>选择 CSV / TXT 文件
+          <input id="import-file-input" type="file" accept=".csv,.txt,.tsv" class="hidden" />
+        </label>
+        <label class="inline-flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer ml-auto">
+          <input id="import-replace-toggle" type="checkbox" class="rounded text-indigo-600" />
+          替换现有词库（不勾选则增量合并）
+        </label>
+      </div>
+      <textarea id="import-textarea" rows="8" placeholder="例如：&#10;assess, 评估; 评定, 评估/估算价值&#10;contribute, 贡献; 捐献; 导致; 促成, 导致/促成 (contribute to)&#10;obscure, 模糊的; 晦涩的; 掩盖, 使模糊/掩盖" class="w-full p-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none text-sm font-mono"></textarea>
+      <div class="flex justify-end gap-2">
+        <button id="cancel-import-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium">取消</button>
+        <button id="confirm-import-btn" type="button" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">解析并导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: ADD SINGLE WORD ==================== -->
+  <div id="add-word-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900">添加单个单词</h3>
+        <button id="close-add-modal" type="button" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="add-word-form" class="space-y-3 text-sm">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">英文单词 *</label>
+            <input id="new-word-en" required type="text" placeholder="e.g. attribute" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">音标 / 词性</label>
+            <input id="new-word-phonetic" type="text" placeholder="/əˈtrɪbjuːt/" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">中文释义 *</label>
+          <input id="new-word-meaning" required type="text" placeholder="把……归因于；属性，特征" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">高频核心考点义（可选）</label>
+          <input id="new-word-highfreq" type="text" placeholder="例如：把……归因于 (attribute A to B)" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">英文例句（可选）</label>
+          <input id="new-word-example" type="text" placeholder="She attributed her success to hard work." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button id="cancel-add-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-medium">取消</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">保存单词</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-16 right-4 z-50 hidden max-w-sm px-4 py-3 rounded-2xl shadow-lg text-sm font-medium text-white bg-slate-900 flex items-center gap-2 transition-all"></div>
+
+  <script>
+    // =========================================================================
+    // 1. DEFAULT SAMPLE VOCABULARY & BUILT-IN CONFUSION KNOWLEDGE BASE
+    // =========================================================================
+    const DEFAULT_WORDS = [
+      {
+        id: 'w_assess',
+        word: 'assess',
+        phonetic: '/əˈses/',
+        pos: 'v.',
+        meaning: '评估，评定，估算（价值、质量或影响）',
+        highFreqMeaning: '评估，评定（常用于学术/商业语境评估风险、表现）',
+        coreKeywords: ['评估', '评定', '评价', '估算', '估价', '考核'],
+        secondaryKeywords: ['评', '估计'],
+        exampleEn: 'The committee will assess the environmental impact of the new project.',
+        exampleZh: '委员会将评估该新项目对环境的影响。',
+        confusableIds: ['access', 'asset'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000001000
+      },
+      {
+        id: 'w_contribute',
+        word: 'contribute',
+        phonetic: '/kənˈtrɪbjuːt/',
+        pos: 'v.',
+        meaning: '导致，促成；贡献，捐献；投稿',
+        highFreqMeaning: '导致，促成（contribute to 在阅读与写作中远比“贡献”更常考）',
+        coreKeywords: ['导致', '促成', '造成', '引起', '有助于'],
+        secondaryKeywords: ['贡献', '捐献', '捐赠', '捐助', '投稿'],
+        freqAdvice: '你答出了基础含义「贡献」，但在英语真题阅读和地道表达中，「导致、促成」（contribute to）这个意思更常用到，建议重点补充记忆！',
+        exampleEn: 'Poor sleep habits can significantly contribute to long-term stress.',
+        exampleZh: '不良的睡眠习惯会显著导致长期压力。',
+        confusableIds: ['attribute', 'distribute'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000002000
+      },
+      {
+        id: 'w_access',
+        word: 'access',
+        phonetic: '/ˈækses/',
+        pos: 'n. / v.',
+        meaning: '通道，入口；接近/使用权；获取，访问',
+        highFreqMeaning: '获取，使用权，进入通道（have access to）',
+        coreKeywords: ['通道', '入口', '通过', '进入', '接近', '获取', '访问', '使用权'],
+        secondaryKeywords: ['接触', '途径'],
+        exampleEn: 'Students have free access to the digital library across all devices.',
+        exampleZh: '学生可以在所有设备上免费访问数字图书馆。',
+        confusableIds: ['assess', 'excess'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000003000
+      },
+      {
+        id: 'w_attribute',
+        word: 'attribute',
+        phonetic: '/əˈtrɪbjuːt/',
+        pos: 'v. / n.',
+        meaning: '把……归因于；属性，特质',
+        highFreqMeaning: '把……归因于（attribute A to B）',
+        coreKeywords: ['归因', '归咎', '归功', '属性', '特质', '特征'],
+        secondaryKeywords: ['把', '原因'],
+        exampleEn: 'Researchers attribute the decline in bees to habitat loss.',
+        exampleZh: '研究人员将蜜蜂数量的减少归因于栖息地丧失。',
+        confusableIds: ['contribute', 'distribute'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000004000
+      },
+      {
+        id: 'w_adapt',
+        word: 'adapt',
+        phonetic: '/əˈdæpt/',
+        pos: 'v.',
+        meaning: '适应；改编，改写',
+        highFreqMeaning: '适应（adapt to）；改编（影视/文学）',
+        coreKeywords: ['适应', '改编', '改写', '调整'],
+        secondaryKeywords: ['适合'],
+        exampleEn: 'Species must adapt to rapidly changing climates to survive.',
+        exampleZh: '物种必须适应迅速变化的气候才能生存。',
+        confusableIds: ['adopt', 'adept'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000005000
+      },
+      {
+        id: 'w_adopt',
+        word: 'adopt',
+        phonetic: '/əˈdɒpt/',
+        pos: 'v.',
+        meaning: '采用，采纳；收养，领养',
+        highFreqMeaning: '采用，采纳（政策/方法）；收养',
+        coreKeywords: ['采用', '采纳', '收养', '领养'],
+        secondaryKeywords: ['接受', '通过'],
+        exampleEn: 'The company decided to adopt a flexible hybrid work policy.',
+        exampleZh: '公司决定采用灵活的混合办公政策。',
+        confusableIds: ['adapt', 'adept'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000006000
+      },
+      {
+        id: 'w_address',
+        word: 'address',
+        phonetic: '/əˈdres/',
+        pos: 'v. / n.',
+        meaning: '解决，处理；向……发表演说；地址',
+        highFreqMeaning: '解决、应对（问题，address the issue），比“地址”在阅读中高频得多',
+        coreKeywords: ['解决', '处理', '应对', '演讲', '演说', '致辞'],
+        secondaryKeywords: ['地址', '住址', '称呼'],
+        freqAdvice: '「地址」是初中基础义，但在高阶阅读和写作中，作动词表示「解决、处理（问题）」（address a problem）才是最高频考点！',
+        exampleEn: 'We need immediate measures to address the rising housing costs.',
+        exampleZh: '我们需要立即采取措施来解决不断上涨的住房成本问题。',
+        confusableIds: ['assess'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000007000
+      },
+      {
+        id: 'w_complement',
+        word: 'complement',
+        phonetic: '/ˈkɒmplɪment/',
+        pos: 'v. / n.',
+        meaning: '补充，补足，与……相得益彰',
+        highFreqMeaning: '补充，使完善，互补',
+        coreKeywords: ['补充', '补足', '互补', '完善', '相配'],
+        secondaryKeywords: ['补语'],
+        exampleEn: 'The crisp white wine complements the seafood dish well.',
+        exampleZh: '这款清爽的白葡萄酒与海鲜菜肴相得益彰。',
+        confusableIds: ['compliment'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000008000
+      },
+      {
+        id: 'w_compliment',
+        word: 'compliment',
+        phonetic: '/ˈkɒmplɪmənt/',
+        pos: 'n. / v.',
+        meaning: '赞美，称赞，恭维',
+        highFreqMeaning: '赞美，称赞（pay a compliment）',
+        coreKeywords: ['赞美', '称赞', '夸奖', '恭维', '表扬'],
+        secondaryKeywords: ['致意', '问候'],
+        exampleEn: 'She received many compliments on her clear presentation.',
+        exampleZh: '她清晰的演讲赢得了许多称赞。',
+        confusableIds: ['complement'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000009000
+      },
+      {
+        id: 'w_affect',
+        word: 'affect',
+        phonetic: '/əˈfekt/',
+        pos: 'v.',
+        meaning: '影响；打动；假装',
+        highFreqMeaning: '影响（动词）',
+        coreKeywords: ['影响', '打动', '感动', '感染'],
+        secondaryKeywords: ['假装'],
+        exampleEn: 'Sleep deprivation directly affects memory consolidation.',
+        exampleZh: '睡眠不足会直接影响记忆巩固。',
+        confusableIds: ['effect'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000010000
+      },
+      {
+        id: 'w_effect',
+        word: 'effect',
+        phonetic: '/ɪˈfekt/',
+        pos: 'n. / v.',
+        meaning: '效果，影响，结果；实现，引起（动词）',
+        highFreqMeaning: '效果，结果（名词）；实现/促成（动词，熟词僻义）',
+        coreKeywords: ['效果', '结果', '作用', '效应', '实现', '促成'],
+        secondaryKeywords: ['影响'],
+        exampleEn: 'The new regulation will take effect next month.',
+        exampleZh: '这项新规定将于下个月生效。',
+        confusableIds: ['affect'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000011000
+      },
+      {
+        id: 'w_distribute',
+        word: 'distribute',
+        phonetic: '/dɪˈstrɪbjuːt/',
+        pos: 'v.',
+        meaning: '分发，分配；分布，散布',
+        highFreqMeaning: '分发，分配，分布',
+        coreKeywords: ['分发', '分配', '分布', '散布', '经销'],
+        secondaryKeywords: ['分派'],
+        exampleEn: 'Volunteers helped distribute food and water to the affected areas.',
+        exampleZh: '志愿者们帮助向受灾地区分发食物和水。',
+        confusableIds: ['contribute', 'attribute'],
+        status: 'new',
+        lastScore: null,
+        confusedWith: [],
+        history: [],
+        updatedAt: 1700000012000
+      }
+    ];
+
+    // Extra reference dictionary for confusion detection even when a confusable word is not in user's list
+    const CONFUSION_REF_DICT = {
+      access: { word: 'access', phonetic: '/ˈækses/', meaning: '通道，通过，进入，获取，使用权', keywords: ['通过', '通道', '进入', '入口', '获取', '访问', '接近', '使用权'], tip: 'a[cc]ess 两个 c 像两扇门 → 进入/通道/通过；a[ss]ess 像坐着评判 → 评估。' },
+      assess: { word: 'assess', phonetic: '/əˈses/', meaning: '评估，评定，估算', keywords: ['评估', '评定', '估算', '评价'], tip: 'a[ss]ess 强调打分评估；a[cc]ess 强调通道获取。' },
+      excess: { word: 'excess', phonetic: '/ɪkˈses/', meaning: '过量，过度，多余', keywords: ['过量', '过度', '多余', '超额', '超过'], tip: 'ex- 向外 + cess 走 → 走过头 → 过量。' },
+      asset: { word: 'asset', phonetic: '/ˈæset/', meaning: '资产，财产，优势', keywords: ['资产', '财产', '优势', '财富'], tip: 'asset 结尾是 t（资产）；assess 结尾是 ss（评估）。' },
+      adapt: { word: 'adapt', phonetic: '/əˈdæpt/', meaning: '适应；改编', keywords: ['适应', '改编', '改写'], tip: 'ad[a]pt 中间是 a（adjust 调整 → 适应）；ad[o]pt 中间是 o（option 选择 → 采纳/收养）。' },
+      adopt: { word: 'adopt', phonetic: '/əˈdɒpt/', meaning: '采纳，采用；收养', keywords: ['采纳', '采用', '收养', '领养'], tip: 'ad[o]pt 选定 → 采纳/收养；ad[a]pt → 适应。' },
+      adept: { word: 'adept', phonetic: '/əˈdept/', meaning: '熟练的，擅长的，内行', keywords: ['熟练', '擅长', '精通', '内行'], tip: 'ad[e]pt 中间是 e（expert 专家 → 熟练的）。' },
+      complement: { word: 'complement', phonetic: '/ˈkɒmplɪment/', meaning: '补充，补足，互补', keywords: ['补充', '补足', '互补', '完善'], tip: 'compl[e]ment 与 compl[e]te（完整）同源 → 补充完整。' },
+      compliment: { word: 'compliment', phonetic: '/ˈkɒmplɪmənt/', meaning: '赞美，称赞，恭维', keywords: ['赞美', '称赞', '夸奖', '恭维', '表扬'], tip: 'compl[i]ment 中间是 i → I like you → 赞美。' },
+      affect: { word: 'affect', phonetic: '/əˈfekt/', meaning: '影响（动词）；打动', keywords: ['影响', '打动', '感动'], tip: '[a]ffect 常作动词（Action）；[e]ffect 常作名词（End result）。' },
+      effect: { word: 'effect', phonetic: '/ɪˈfekt/', meaning: '效果，结果（名词）；实现', keywords: ['效果', '结果', '作用', '生效'], tip: '[e]ffect 侧重结果/效果；[a]ffect 侧重动词影响。' },
+      attribute: { word: 'attribute', phonetic: '/əˈtrɪbjuːt/', meaning: '把……归因于；属性', keywords: ['归因', '归咎', '属性', '特征'], tip: 'at-(向) + tribute(给予) → 归因于。' },
+      contribute: { word: 'contribute', phonetic: '/kənˈtrɪbjuːt/', meaning: '导致，促成；贡献，捐献', keywords: ['贡献', '捐献', '导致', '促成'], tip: 'con-(共同) + tribute → 共同促成/导致/贡献。' },
+      distribute: { word: 'distribute', phonetic: '/dɪˈstrɪbjuːt/', meaning: '分发，分配；分布', keywords: ['分发', '分配', '分布', '散布'], tip: 'dis-(分散) + tribute → 分发/分布。' }
+    };
+
+    // =========================================================================
+    // 2. APPLICATION STATE & STORAGE
+    // =========================================================================
+    const STORAGE_KEY = 'lexisync_state_v1';
+
+    function detectDeviceName() {
+      const ua = navigator.userAgent || '';
+      if (/Android/i.test(ua)) return 'Android-设备';
+      if (/Windows/i.test(ua)) return 'Windows-电脑';
+      if (/Mac/i.test(ua)) return 'Mac-电脑';
+      if (/iPhone|iPad/i.test(ua)) return 'iOS-设备';
+      return 'Web-设备';
+    }
+
+    function createInitialState() {
+      return {
+        words: JSON.parse(JSON.stringify(DEFAULT_WORDS)),
+        activeTab: 'study',
+        studyMode: 'all',
+        currentWordId: DEFAULT_WORDS[0].id,
+        mistakeFilter: 'confused',
+        todayCount: 0,
+        todayDate: new Date().toISOString().slice(0, 10),
+        tipDismissed: false,
+        deviceName: detectDeviceName(),
+        lastSyncAt: null,
+        syncConfig: {
+          provider: 'supabase',
+          supabaseUrl: '',
+          supabaseKey: '',
+          supabaseSyncId: '',
+          onedriveToken: '',
+          onedrivePath: '/me/drive/root:/LexiSync/lexisync_data.json:/content',
+          webdavUrl: '',
+          webdavUser: '',
+          webdavPass: ''
+        },
+        aiConfig: {
+          enabled: false,
+          baseUrl: 'https://api.deepseek.com/v1',
+          apiKey: '',
+          model: 'deepseek-chat'
+        }
+      };
+    }
+
+    function loadState() {
+      const fallback = createInitialState();
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        const today = new Date().toISOString().slice(0, 10);
+        const merged = {
+          ...fallback,
+          ...parsed,
+          syncConfig: { ...fallback.syncConfig, ...(parsed.syncConfig || {}) },
+          aiConfig: { ...fallback.aiConfig, ...(parsed.aiConfig || {}) }
+        };
+        if (merged.todayDate !== today) {
+          merged.todayDate = today;
+          merged.todayCount = 0;
+        }
+        if (!Array.isArray(merged.words) || merged.words.length === 0) {
+          merged.words = JSON.parse(JSON.stringify(DEFAULT_WORDS));
+        }
+        return merged;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    let state = loadState();
+    let isEvaluating = false;
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        // Ignore storage quota or sandbox restrictions
+      }
+    }
+
+    // =========================================================================
+    // 3. HELPER UTILITIES
+    // =========================================================================
+    function showToast(msg, type = 'info') {
+      const el = document.getElementById('toast');
+      const colors = {
+        info: 'bg-slate-900',
+        success: 'bg-emerald-600',
+        warn: 'bg-amber-600',
+        error: 'bg-rose-600'
+      };
+      el.className = `fixed top-16 right-4 z-50 max-w-sm px-4 py-3 rounded-2xl shadow-lg text-sm font-medium text-white flex items-center gap-2 transition-all ${colors[type] || colors.info}`;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.add('hidden'), 3200);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function levenshtein(a, b) {
+      a = a.toLowerCase();
+      b = b.toLowerCase();
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        }
+      }
+      return dp[m][n];
+    }
+
+    function highlightWordDiff(baseWord, otherWord) {
+      const a = baseWord.toLowerCase();
+      const b = otherWord.toLowerCase();
+      let html = '';
+      for (let i = 0; i < b.length; i++) {
+        if (a[i] !== b[i]) {
+          html += `<span class="diff-highlight">${escapeHtml(otherWord[i])}</span>`;
+        } else {
+          html += escapeHtml(otherWord[i]);
+        }
+      }
+      return html;
+    }
+
+    function extractTokens(meaningStr) {
+      return String(meaningStr || '')
+        .replace(/[（(][^）)]*[）)]/g, ' ')
+        .split(/[，,；;、/。\s]+/)
+        .map(s => s.trim())
+        .filter(s => s.length >= 1);
+    }
+
+    function getStatusMeta(status) {
+      const map = {
+        new: { label: '新词', cls: 'bg-slate-100 text-slate-600' },
+        mastered: { label: '已掌握', cls: 'bg-emerald-100 text-emerald-700' },
+        partial: { label: '高频义待补', cls: 'bg-amber-100 text-amber-800' },
+        wrong: { label: '答错', cls: 'bg-orange-100 text-orange-700' },
+        dont_know: { label: '不会', cls: 'bg-rose-100 text-rose-700' },
+        confused: { label: '易混词', cls: 'bg-purple-100 text-purple-700' }
+      };
+      return map[status] || map.new;
+    }
+
+    function getFilteredQueue() {
+      const mode = state.studyMode;
+      if (mode === 'confused') return state.words.filter(w => w.status === 'confused');
+      if (mode === 'wrong') return state.words.filter(w => w.status === 'wrong' || w.status === 'dont_know');
+      if (mode === 'partial') return state.words.filter(w => w.status === 'partial');
+      return state.words;
+    }
+
+    function getCurrentWord() {
+      const queue = getFilteredQueue();
+      if (queue.length === 0) return null;
+      let found = queue.find(w => w.id === state.currentWordId);
+      if (!found) {
+        found = queue[0];
+        state.currentWordId = found.id;
+      }
+      return found;
+    }
+
+    // =========================================================================
+    // 4. AI SEMANTIC & CONFUSION EVALUATION ENGINE
+    // =========================================================================
+    async function evaluateAnswer(wordObj, userInputRaw) {
+      const userInput = userInputRaw.trim();
+
+      // If external LLM API is enabled and configured, call it first with fallback
+      if (state.aiConfig.enabled && state.aiConfig.apiKey && state.aiConfig.baseUrl) {
+        try {
+          const llmRes = await callExternalAI(wordObj, userInput);
+          if (llmRes) return llmRes;
+        } catch (err) {
+          showToast('外部 AI 接口调用失败，已自动切换内置引擎评判', 'warn');
+        }
+      }
+      return evaluateLocally(wordObj, userInput);
+    }
+
+    async function callExternalAI(wordObj, userInput) {
+      const baseUrl = state.aiConfig.baseUrl.replace(/\/+$/, '');
+      const endpoint = `${baseUrl}/chat/completions`;
+      const prompt = `你是一位严谨的英语词汇记忆教练。
+目标单词：${wordObj.word}
+标准释义：${wordObj.meaning}
+高频核心义：${wordObj.highFreqMeaning || wordObj.meaning}
+用户输入：${userInput}
+
+请判断用户输入的中文释义与目标单词的匹配程度，严格返回纯 JSON（不要 markdown 代码块），格式如下：
+{
+  "score": 0到100的整数,
+  "category": "mastered" | "partial" | "wrong" | "confused",
+  "evaluation": "简明直接的中文评判，说明对错原因",
+  "freqTip": "如果用户只答了次要义、遗漏了更常用的高频义，给出明确提示；否则空字符串",
+  "confusedWords": [
+    {"word": "可能搞混的英文单词", "phonetic": "音标", "meaning": "释义", "tip": "拼写或记忆区分提示"}
+  ]
+}
+规则：如果用户把目标词和另一个形近/音近词记混了（例如把 assess 记成 access 的意思“通过/通道”），score 给 0，category 设为 "confused"，并在 confusedWords 中列出搞混的单词。如果用户只答了基础义但漏了更常考的高频义（例如 contribute 只答“贡献”漏了“导致/促成”），score 给 65-75，category 设为 "partial"，并在 freqTip 指出更常用义。`;
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.aiConfig.apiKey}`
+        },
+        body: JSON.stringify({
+          model: state.aiConfig.model || 'deepseek-chat',
+          temperature: 0.2,
+          messages: [
+            { role: 'system', content: '你是专业的英语背单词AI评判助手，只输出合法JSON。' },
+            { role: 'user', content: prompt }
+          ]
+        })
+      });
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content || '';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Invalid JSON');
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        score: Math.max(0, Math.min(100, Number(parsed.score) || 0)),
+        category: ['mastered', 'partial', 'wrong', 'confused'].includes(parsed.category) ? parsed.category : 'wrong',
+        evaluation: parsed.evaluation || '已完成 AI 评估。',
+        freqTip: parsed.freqTip || '',
+        confusedWords: Array.isArray(parsed.confusedWords) ? parsed.confusedWords : [],
+        engine: '外部 AI'
+      };
+    }
+
+    function findConfusedCandidates(wordObj, userInput) {
+      const matches = [];
+      const seen = new Set();
+      const inputLower = userInput.toLowerCase();
+
+      // 1. Check explicitly linked confusable words first
+      const candidatePool = [];
+      (wordObj.confusableIds || []).forEach(wName => {
+        if (CONFUSION_REF_DICT[wName]) candidatePool.push(CONFUSION_REF_DICT[wName]);
+      });
+
+      // 2. Check all words in user's wordbook with small Levenshtein distance (<= 2)
+      state.words.forEach(w => {
+        if (w.word.toLowerCase() === wordObj.word.toLowerCase()) return;
+        const dist = levenshtein(wordObj.word, w.word);
+        if (dist <= 2 || (wordObj.word.length >= 6 && dist <= 3 && wordObj.word.slice(-4) === w.word.slice(-4))) {
+          candidatePool.push({
+            word: w.word,
+            phonetic: w.phonetic || '',
+            meaning: w.meaning,
+            keywords: [...(w.coreKeywords || []), ...(w.secondaryKeywords || []), ...extractTokens(w.meaning)],
+            tip: `注意拼写差异：${wordObj.word}（${wordObj.meaning.slice(0, 12)}） vs ${w.word}（${w.meaning.slice(0, 12)}）`
+          });
+        }
+      });
+
+      // 3. Check built-in confusion reference dictionary by Levenshtein distance
+      Object.values(CONFUSION_REF_DICT).forEach(ref => {
+        if (ref.word.toLowerCase() === wordObj.word.toLowerCase()) return;
+        const dist = levenshtein(wordObj.word, ref.word);
+        if (dist <= 2) candidatePool.push(ref);
+      });
+
+      for (const cand of candidatePool) {
+        const key = cand.word.toLowerCase();
+        if (seen.has(key)) continue;
+        const kws = cand.keywords || extractTokens(cand.meaning);
+        const hit = kws.some(kw => kw.length >= 1 && (inputLower.includes(kw.toLowerCase()) || kw.toLowerCase().includes(inputLower)));
+        if (hit) {
+          seen.add(key);
+          matches.push(cand);
+        }
+      }
+      return matches;
+    }
+
+    function evaluateLocally(wordObj, userInput) {
+      const normInput = userInput.replace(/\s+/g, '');
+      const coreKws = wordObj.coreKeywords && wordObj.coreKeywords.length
+        ? wordObj.coreKeywords
+        : extractTokens(wordObj.highFreqMeaning || wordObj.meaning);
+      const secKws = wordObj.secondaryKeywords || extractTokens(wordObj.meaning);
+      const allTargetTokens = extractTokens(wordObj.meaning);
+
+      // Step 1: Check core keyword hits
+      const coreHits = coreKws.filter(kw => normInput.includes(kw) || (normInput.length >= 2 && kw.includes(normInput)));
+      const secHits = secKws.filter(kw => normInput.includes(kw) || (normInput.length >= 2 && kw.includes(normInput)));
+      const generalHits = allTargetTokens.filter(kw => kw.length >= 2 && (normInput.includes(kw) || (normInput.length >= 2 && kw.includes(normInput))));
+
+      // Case A: Hit core high-frequency meaning
+      if (coreHits.length > 0) {
+        const score = coreHits.length >= 2 || normInput.length >= 4 ? 95 : 90;
+        const hasExtraFreq = wordObj.freqAdvice && secHits.length > 0 && coreHits.length === 0;
+        return {
+          score,
+          category: 'mastered',
+          evaluation: `匹配度极高！准确命中了「${wordObj.word}」的核心释义（${coreHits.slice(0, 2).join('、')}）。`,
+          freqTip: hasExtraFreq ? wordObj.freqAdvice : '',
+          confusedWords: [],
+          engine: '内置语义引擎'
+        };
+      }
+
+      // Case B: Hit only secondary meaning (e.g., contribute -> 贡献 -> 70% + prompt "导致")
+      if (secHits.length > 0) {
+        const score = 70;
+        const tip = wordObj.freqAdvice || `你答出了基础含义（${secHits[0]}），但在实际阅读和考试中，更常考的高频核心义是：「${wordObj.highFreqMeaning || wordObj.meaning}」。`;
+        return {
+          score,
+          category: 'partial',
+          evaluation: `部分正确（${score}%）：你答出了「${secHits[0]}」，含义没错，但漏掉了该词最常考的核心义。`,
+          freqTip: tip,
+          confusedWords: [],
+          engine: '内置语义引擎'
+        };
+      }
+
+      // Case C: Check if user confused it with another lookalike word (e.g. assess -> 通过 -> access -> 0%)
+      const confusedMatches = findConfusedCandidates(wordObj, normInput);
+      if (confusedMatches.length > 0) {
+        const first = confusedMatches[0];
+        return {
+          score: 0,
+          category: 'confused',
+          evaluation: `匹配度 0%：你的回答「${userInput}」并非 ${wordObj.word} 的意思，极可能是与形近词「${first.word}」（${first.meaning}）记混了！`,
+          freqTip: '',
+          confusedWords: confusedMatches,
+          engine: '内置语义引擎'
+        };
+      }
+
+      // Case D: Fuzzy character overlap fallback for user-imported custom words
+      if (generalHits.length > 0) {
+        return {
+          score: 85,
+          category: 'mastered',
+          evaluation: `回答正确！命中了释义关键词「${generalHits[0]}」。`,
+          freqTip: '',
+          confusedWords: [],
+          engine: '内置语义引擎'
+        };
+      }
+
+      // Character overlap check
+      const meaningChars = new Set(wordObj.meaning.replace(/[^\u4e00-\u9fa5]/g, '').split(''));
+      const inputChars = normInput.replace(/[^\u4e00-\u9fa5]/g, '').split('');
+      const overlap = inputChars.filter(c => meaningChars.has(c));
+      if (inputChars.length >= 2 && overlap.length / inputChars.length >= 0.5) {
+        const score = Math.min(75, Math.round((overlap.length / inputChars.length) * 80));
+        return {
+          score,
+          category: 'partial',
+          evaluation: `语义接近（${score}%），但表述还不够精准。建议对照标准释义强化记忆。`,
+          freqTip: wordObj.freqAdvice || '',
+          confusedWords: [],
+          engine: '内置语义引擎'
+        };
+      }
+
+      // Case E: Completely wrong (0%) — also check if there are nearby lookalike words worth reminding
+      const nearbyLookalikes = [];
+      (wordObj.confusableIds || []).forEach(id => {
+        if (CONFUSION_REF_DICT[id]) nearbyLookalikes.push(CONFUSION_REF_DICT[id]);
+      });
+
+      return {
+        score: 0,
+        category: 'wrong',
+        evaluation: `匹配度 0%：「${userInput}」与 ${wordObj.word} 的实际含义「${wordObj.meaning}」不符，已记入错题本以便后续重点复习。`,
+        freqTip: '',
+        confusedWords: nearbyLookalikes,
+        engine: '内置语义引擎'
+      };
+    }
+
+    // =========================================================================
+    // 5. RENDERING FUNCTIONS
+    // =========================================================================
+    function renderAll() {
+      renderNavigation();
+      renderStudyView();
+      renderMistakesView();
+      renderWordbookView();
+      renderSyncView();
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function renderNavigation() {
+      const mistakeCount = state.words.filter(w => ['confused', 'dont_know', 'wrong'].includes(w.status)).length;
+      const badge = document.getElementById('nav-mistake-badge');
+      if (mistakeCount > 0) {
+        badge.textContent = mistakeCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        const active = btn.dataset.tab === state.activeTab;
+        btn.className = `nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+          active ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+        }`;
+      });
+
+      document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+        const active = btn.dataset.tab === state.activeTab;
+        btn.className = `mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium ${
+          active ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-500'
+        }`;
+      });
+
+      document.querySelectorAll('.view-section').forEach(sec => {
+        sec.classList.toggle('hidden', sec.id !== `view-${state.activeTab}`);
+      });
+
+      // Header sync indicator
+      const syncText = document.getElementById('sync-status-text');
+      const syncDot = document.getElementById('sync-dot');
+      const hasCloud = (state.syncConfig.provider === 'supabase' && state.syncConfig.supabaseUrl && state.syncConfig.supabaseKey) ||
+                       (state.syncConfig.provider === 'onedrive' && state.syncConfig.onedriveToken) ||
+                       (state.syncConfig.provider === 'webdav' && state.syncConfig.webdavUrl);
+      if (hasCloud) {
+        syncText.textContent = state.lastSyncAt ? '已云同步' : '云端就绪';
+        syncDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+      } else {
+        syncText.textContent = '仅本地保存';
+        syncDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+      }
+    }
+
+    function renderStudyView() {
+      // Demo tip banner
+      document.getElementById('demo-tip-banner').classList.toggle('hidden', state.tipDismissed);
+
+      // Mode pills
+      document.querySelectorAll('.mode-pill').forEach(btn => {
+        const active = btn.dataset.mode === state.studyMode;
+        btn.className = `mode-pill px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+          active ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+        }`;
+      });
+
+      // Top quick stats
+      document.getElementById('stat-mastered').textContent = state.words.filter(w => w.status === 'mastered').length;
+      document.getElementById('stat-confused').textContent = state.words.filter(w => w.status === 'confused').length;
+      document.getElementById('stat-today').textContent = state.todayCount;
+
+      const queue = getFilteredQueue();
+      const cardEl = document.getElementById('study-card');
+      const emptyEl = document.getElementById('study-empty-state');
+
+      // Queue chips
+      document.getElementById('queue-count-label').textContent = `共 ${queue.length} 词`;
+      const chipsWrap = document.getElementById('queue-word-chips');
+      chipsWrap.innerHTML = queue.map(w => {
+        const isCur = w.id === state.currentWordId;
+        const dotColors = {
+          new: 'bg-slate-300',
+          mastered: 'bg-emerald-500',
+          partial: 'bg-amber-500',
+          wrong: 'bg-orange-500',
+          dont_know: 'bg-rose-500',
+          confused: 'bg-purple-500'
+        };
+        return `<button type="button" data-jump-id="${escapeHtml(w.id)}" class="queue-chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+          isCur ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+        }"><span class="w-1.5 h-1.5 rounded-full ${isCur ? 'bg-white' : (dotColors[w.status] || 'bg-slate-300')}"></span>${escapeHtml(w.word)}</button>`;
+      }).join('');
+
+      if (queue.length === 0) {
+        cardEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      cardEl.classList.remove('hidden');
+      emptyEl.classList.add('hidden');
+
+      const wordObj = getCurrentWord();
+      const idx = queue.findIndex(w => w.id === wordObj.id);
+      document.getElementById('card-counter').textContent = `${idx + 1} / ${queue.length}`;
+      document.getElementById('study-progress-bar').style.width = `${Math.round(((idx + 1) / queue.length) * 100)}%`;
+
+      const statusMeta = getStatusMeta(wordObj.status);
+      const statusBadge = document.getElementById('card-status-badge');
+      statusBadge.textContent = statusMeta.label;
+      statusBadge.className = `text-xs font-semibold px-2.5 py-0.5 rounded-full ${statusMeta.cls}`;
+
+      const engineBadge = document.getElementById('card-ai-engine-badge');
+      engineBadge.textContent = state.aiConfig.enabled && state.aiConfig.apiKey ? `外部AI: ${state.aiConfig.model}` : '内置智能评判';
+
+      document.getElementById('card-word').textContent = wordObj.word;
+      document.getElementById('card-phonetic').textContent = wordObj.phonetic || '';
+      const posEl = document.getElementById('card-pos');
+      if (wordObj.pos) {
+        posEl.textContent = wordObj.pos;
+        posEl.classList.remove('hidden');
+      } else {
+        posEl.classList.add('hidden');
+      }
+      document.getElementById('card-example-en').textContent = wordObj.exampleEn || '暂无例句，可在词表管理中补充。';
+    }
+
+    function renderEvaluationResult(wordObj, userInput, result) {
+      const panel = document.getElementById('eval-panel');
+      panel.classList.remove('hidden');
+
+      const mainCard = document.getElementById('eval-main-card');
+      const ring = document.getElementById('eval-score-ring');
+      const scoreNum = document.getElementById('eval-score-num');
+      const verdictBadge = document.getElementById('eval-verdict-badge');
+
+      // Colors by category
+      const themeMap = {
+        mastered: { card: 'bg-emerald-50/60 border-emerald-200', stroke: '#10b981', badge: 'bg-emerald-600 text-white', label: '掌握良好' },
+        partial: { card: 'bg-amber-50/50 border-amber-200', stroke: '#f59e0b', badge: 'bg-amber-500 text-white', label: '部分掌握 · 需补高频义' },
+        confused: { card: 'bg-purple-50/60 border-purple-200', stroke: '#9333ea', badge: 'bg-purple-600 text-white', label: '与其他单词记混' },
+        wrong: { card: 'bg-rose-50/60 border-rose-200', stroke: '#e11d48', badge: 'bg-rose-600 text-white', label: '回答错误' },
+        dont_know: { card: 'bg-rose-50/60 border-rose-200', stroke: '#e11d48', badge: 'bg-rose-600 text-white', label: '标记为不会' }
+      };
+      const t = themeMap[result.category] || themeMap.wrong;
+
+      mainCard.className = `rounded-2xl border p-5 space-y-4 ${t.card}`;
+      ring.setAttribute('stroke', t.stroke);
+      const circumference = 163.36;
+      const offset = circumference - (circumference * result.score) / 100;
+      ring.style.strokeDashoffset = offset;
+      scoreNum.textContent = `${result.score}%`;
+
+      verdictBadge.className = `text-xs font-bold px-2.5 py-0.5 rounded-full ${t.badge}`;
+      verdictBadge.textContent = t.label;
+
+      document.getElementById('eval-user-input-echo').textContent = userInput ? `你的回答：「${userInput}」` : '（点击了不会）';
+      document.getElementById('eval-feedback-text').textContent = result.evaluation;
+
+      const freqTipWrap = document.getElementById('eval-freq-tip');
+      if (result.freqTip) {
+        freqTipWrap.classList.remove('hidden');
+        document.getElementById('eval-freq-tip-text').textContent = result.freqTip;
+      } else {
+        freqTipWrap.classList.add('hidden');
+      }
+
+      document.getElementById('eval-correct-meaning').textContent = wordObj.meaning;
+      const hfWrap = document.getElementById('eval-highfreq-wrap');
+      if (wordObj.highFreqMeaning) {
+        hfWrap.classList.remove('hidden');
+        document.getElementById('eval-highfreq-meaning').textContent = wordObj.highFreqMeaning;
+      } else {
+        hfWrap.classList.add('hidden');
+      }
+
+      const exWrap = document.getElementById('eval-example-wrap');
+      if (wordObj.exampleEn) {
+        exWrap.classList.remove('hidden');
+        document.getElementById('eval-example-en').textContent = wordObj.exampleEn;
+        document.getElementById('eval-example-zh').textContent = wordObj.exampleZh || '';
+      } else {
+        exWrap.classList.add('hidden');
+      }
+
+      // Confused words section
+      const confSection = document.getElementById('eval-confused-section');
+      const confList = document.getElementById('eval-confused-list');
+      if (result.confusedWords && result.confusedWords.length > 0) {
+        confSection.classList.remove('hidden');
+        confList.innerHTML = result.confusedWords.map(cw => `
+          <div class="bg-white rounded-xl border border-purple-200/80 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-base font-extrabold font-mono text-slate-900">${highlightWordDiff(wordObj.word, cw.word)}</span>
+                <span class="text-xs font-mono text-slate-400">${escapeHtml(cw.phonetic || '')}</span>
+                <span class="text-xs font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">对比 ${escapeHtml(wordObj.word)}</span>
+              </div>
+              <p class="text-xs font-semibold text-slate-700">释义：${escapeHtml(cw.meaning)}</p>
+              ${cw.tip ? `<p class="text-xs text-slate-500">区分技巧：${escapeHtml(cw.tip)}</p>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        confSection.classList.add('hidden');
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function resetStudyCardInput() {
+      document.getElementById('answer-input').value = '';
+      document.getElementById('eval-panel').classList.add('hidden');
+      document.getElementById('example-hint-box').classList.add('hidden');
+      document.getElementById('answer-input').focus();
+    }
+
+    function renderMistakesView() {
+      const counts = {
+        confused: state.words.filter(w => w.status === 'confused').length,
+        dont_know: state.words.filter(w => w.status === 'dont_know').length,
+        wrong: state.words.filter(w => w.status === 'wrong').length,
+        partial: state.words.filter(w => w.status === 'partial').length
+      };
+      document.getElementById('count-confused').textContent = counts.confused;
+      document.getElementById('count-dont-know').textContent = counts.dont_know;
+      document.getElementById('count-wrong').textContent = counts.wrong;
+      document.getElementById('count-partial').textContent = counts.partial;
+
+      document.querySelectorAll('.mfilter-card').forEach(btn => {
+        const active = btn.dataset.mfilter === state.mistakeFilter;
+        btn.className = `mfilter-card text-left p-4 rounded-2xl bg-white border-2 transition-all ${
+          active ? 'border-indigo-500 shadow-sm ring-2 ring-indigo-500/10' : 'border-slate-200 hover:border-slate-300'
+        }`;
+      });
+
+      const list = state.words.filter(w => w.status === state.mistakeFilter);
+      const container = document.getElementById('mistakes-list');
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-sm text-slate-500">
+            该分类下暂时没有记录。在「背单词」页面答题后，系统会自动归档不会、错误、记混和高频义缺失的单词。
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(w => {
+        const lastRec = w.history && w.history.length ? w.history[w.history.length - 1] : null;
+        const confTags = (w.confusedWith || []).map(c => `<span class="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800">易混：${escapeHtml(c)}</span>`).join('');
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div class="space-y-2 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-lg font-extrabold text-slate-900">${escapeHtml(w.word)}</span>
+                <span class="text-xs font-mono text-slate-400">${escapeHtml(w.phonetic || '')}</span>
+                ${w.lastScore !== null ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">最近得分 ${w.lastScore}%</span>` : ''}
+                ${confTags}
+              </div>
+              <p class="text-sm text-slate-800 font-medium">${escapeHtml(w.meaning)}</p>
+              ${lastRec ? `
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-600 space-y-1">
+                  <div><strong class="text-slate-700">上次作答：</strong>${escapeHtml(lastRec.input || '（点击了不会）')}</div>
+                  <div><strong class="text-slate-700">AI 评估：</strong>${escapeHtml(lastRec.evaluation)}</div>
+                </div>
+              ` : ''}
+            </div>
+            <div class="flex sm:flex-col gap-2 shrink-0">
+              <button type="button" data-review-id="${escapeHtml(w.id)}" class="review-one-btn px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold">立即重测</button>
+              <button type="button" data-clear-mistake-id="${escapeHtml(w.id)}" class="clear-mistake-btn px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 text-xs font-medium">标为已掌握</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderWordbookView() {
+      const q = (document.getElementById('wordbook-search').value || '').trim().toLowerCase();
+      const sf = document.getElementById('wordbook-status-filter').value;
+      const filtered = state.words.filter(w => {
+        if (sf !== 'all' && w.status !== sf) return false;
+        if (q && !w.word.toLowerCase().includes(q) && !w.meaning.toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      const tbody = document.getElementById('wordbook-tbody');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400 text-sm">未找到匹配的单词</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(w => {
+        const sm = getStatusMeta(w.status);
+        return `
+          <tr class="hover:bg-slate-50/70 transition-colors">
+            <td class="py-3.5 px-4 align-top">
+              <div class="font-bold text-slate-900">${escapeHtml(w.word)}</div>
+              <div class="text-xs font-mono text-slate-400">${escapeHtml(w.phonetic || '')}</div>
+            </td>
+            <td class="py-3.5 px-4 align-top">
+              <div class="text-slate-800">${escapeHtml(w.meaning)}</div>
+              ${w.highFreqMeaning ? `<div class="text-xs text-indigo-600 mt-0.5">高频：${escapeHtml(w.highFreqMeaning)}</div>` : ''}
+            </td>
+            <td class="py-3.5 px-4 align-top whitespace-nowrap">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${sm.cls}">${sm.label}</span>
+              ${w.lastScore !== null ? `<div class="text-xs text-slate-400 mt-1">匹配度 ${w.lastScore}%</div>` : ''}
+            </td>
+            <td class="py-3.5 px-4 align-top text-right whitespace-nowrap">
+              <button type="button" data-jump-study-id="${escapeHtml(w.id)}" class="jump-study-btn text-xs font-semibold text-indigo-600 hover:text-indigo-800 mr-2.5">去背诵</button>
+              <button type="button" data-delete-word-id="${escapeHtml(w.id)}" class="delete-word-btn text-xs font-medium text-rose-500 hover:text-rose-700">删除</button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function renderSyncView() {
+      document.getElementById('device-name-input').value = state.deviceName;
+      document.getElementById('last-sync-meta').textContent = state.lastSyncAt
+        ? `上次云同步：${new Date(state.lastSyncAt).toLocaleString('zh-CN')}`
+        : '上次同步：尚未云同步（数据已自动保存在本机浏览器）';
+
+      const prov = state.syncConfig.provider;
+      document.querySelectorAll('.sync-provider-btn').forEach(btn => {
+        const active = btn.dataset.provider === prov;
+        btn.className = `sync-provider-btn px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${
+          active ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+        }`;
+      });
+      document.querySelectorAll('.sync-cfg-panel').forEach(p => {
+        p.classList.toggle('hidden', p.id !== `cfg-${prov}`);
+      });
+
+      document.getElementById('sb-url').value = state.syncConfig.supabaseUrl || '';
+      document.getElementById('sb-key').value = state.syncConfig.supabaseKey || '';
+      document.getElementById('sb-sync-id').value = state.syncConfig.supabaseSyncId || '';
+      document.getElementById('od-token').value = state.syncConfig.onedriveToken || '';
+      document.getElementById('od-path').value = state.syncConfig.onedrivePath || '/me/drive/root:/LexiSync/lexisync_data.json:/content';
+      document.getElementById('wd-url').value = state.syncConfig.webdavUrl || '';
+      document.getElementById('wd-user').value = state.syncConfig.webdavUser || '';
+      document.getElementById('wd-pass').value = state.syncConfig.webdavPass || '';
+
+      document.getElementById('ai-enable-toggle').checked = !!state.aiConfig.enabled;
+      document.getElementById('ai-base-url').value = state.aiConfig.baseUrl || 'https://api.deepseek.com/v1';
+      document.getElementById('ai-api-key').value = state.aiConfig.apiKey || '';
+      document.getElementById('ai-model').value = state.aiConfig.model || 'deepseek-chat';
+    }
+
+    // =========================================================================
+    // 6. MULTI-DEVICE SYNC ENGINE (TIMESTAMP MERGE)
+    // =========================================================================
+    function mergeWordLists(localWords, remoteWords) {
+      const map = new Map();
+      localWords.forEach(w => map.set(w.word.toLowerCase(), w));
+      (remoteWords || []).forEach(rw => {
+        const key = rw.word.toLowerCase();
+        const lw = map.get(key);
+        if (!lw) {
+          map.set(key, rw);
+        } else {
+          // Keep the version with newer updatedAt timestamp, merge confusedWith union
+          const winner = (rw.updatedAt || 0) > (lw.updatedAt || 0) ? { ...rw } : { ...lw };
+          const unionConfused = Array.from(new Set([...(lw.confusedWith || []), ...(rw.confusedWith || [])]));
+          winner.confusedWith = unionConfused;
+          map.set(key, winner);
+        }
+      });
+      return Array.from(map.values());
+    }
+
+    async function performCloudSync() {
+      const cfg = state.syncConfig;
+      const syncText = document.getElementById('sync-status-text');
+      syncText.textContent = '同步中...';
+
+      try {
+        if (cfg.provider === 'supabase') {
+          if (!cfg.supabaseUrl || !cfg.supabaseKey || !cfg.supabaseSyncId) {
+            showToast('请先在「同步与AI设置」中填写 Supabase URL、Key 和同步口令', 'warn');
+            renderNavigation();
+            return;
+          }
+          const base = cfg.supabaseUrl.replace(/\/+$/, '');
+          const headers = {
+            'apikey': cfg.supabaseKey,
+            'Authorization': `Bearer ${cfg.supabaseKey}`,
+            'Content-Type': 'application/json'
+          };
+          // 1. Pull remote
+          const getRes = await fetch(`${base}/rest/v1/vocab_sync?sync_id=eq.${encodeURIComponent(cfg.supabaseSyncId)}&select=payload`, { headers });
+          if (!getRes.ok) throw new Error('Supabase 读取失败: HTTP ' + getRes.status);
+          const rows = await getRes.json();
+          if (rows.length > 0 && rows[0].payload?.words) {
+            state.words = mergeWordLists(state.words, rows[0].payload.words);
+          }
+          // 2. Push merged payload (upsert)
+          const upsertRes = await fetch(`${base}/rest/v1/vocab_sync`, {
+            method: 'POST',
+            headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+            body: JSON.stringify({
+              sync_id: cfg.supabaseSyncId,
+              payload: { words: state.words, device: state.deviceName, syncedAt: Date.now() },
+              updated_at: new Date().toISOString()
+            })
+          });
+          if (!upsertRes.ok) throw new Error('Supabase 写入失败: HTTP ' + upsertRes.status);
+        } else if (cfg.provider === 'onedrive') {
+          if (!cfg.onedriveToken) {
+            showToast('请先填写 OneDrive Microsoft Graph Access Token', 'warn');
+            renderNavigation();
+            return;
+          }
+          const path = cfg.onedrivePath.startsWith('/') ? cfg.onedrivePath : '/' + cfg.onedrivePath;
+          const url = `https://graph.microsoft.com/v1.0${path}`;
+          const headers = { 'Authorization': `Bearer ${cfg.onedriveToken}` };
+          const getRes = await fetch(url, { headers });
+          if (getRes.ok) {
+            const remoteData = await getRes.json();
+            if (remoteData?.words) state.words = mergeWordLists(state.words, remoteData.words);
+          }
+          const putRes = await fetch(url, {
+            method: 'PUT',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ words: state.words, device: state.deviceName, syncedAt: Date.now() })
+          });
+          if (!putRes.ok) throw new Error('OneDrive 写入失败: HTTP ' + putRes.status);
+        } else if (cfg.provider === 'webdav') {
+          if (!cfg.webdavUrl || !cfg.webdavUser) {
+            showToast('请先填写 WebDAV 地址与账号信息', 'warn');
+            renderNavigation();
+            return;
+          }
+          const auth = 'Basic ' + btoa(`${cfg.webdavUser}:${cfg.webdavPass}`);
+          const getRes = await fetch(cfg.webdavUrl, { headers: { 'Authorization': auth } });
+          if (getRes.ok) {
+            const remoteData = await getRes.json();
+            if (remoteData?.words) state.words = mergeWordLists(state.words, remoteData.words);
+          }
+          const putRes = await fetch(cfg.webdavUrl, {
+            method: 'PUT',
+            headers: { 'Authorization': auth, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ words: state.words, device: state.deviceName, syncedAt: Date.now() })
+          });
+          if (!putRes.ok) throw new Error('WebDAV 写入失败: HTTP ' + putRes.status);
+        }
+
+        state.lastSyncAt = Date.now();
+        saveState();
+        renderAll();
+        showToast('多端双向同步成功！已合并最新学习进度', 'success');
+      } catch (err) {
+        showToast(`同步失败：${err.message || '请检查网络与配置'}`, 'error');
+        renderNavigation();
+      }
+    }
+
+    // =========================================================================
+    // 7. EVENT LISTENERS
+    // =========================================================================
+    function initEvents() {
+      // Tab switching (desktop & mobile)
+      document.querySelectorAll('[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.activeTab = btn.dataset.tab;
+          saveState();
+          renderAll();
+        });
+      });
+
+      // Header quick sync
+      document.getElementById('header-sync-btn').addEventListener('click', () => {
+        const hasCloud = (state.syncConfig.provider === 'supabase' && state.syncConfig.supabaseUrl) ||
+                         (state.syncConfig.provider === 'onedrive' && state.syncConfig.onedriveToken) ||
+                         (state.syncConfig.provider === 'webdav' && state.syncConfig.webdavUrl);
+        if (!hasCloud) {
+          state.activeTab = 'sync';
+          saveState();
+          renderAll();
+          showToast('请先选择并配置你的云同步方式', 'info');
+        } else {
+          performCloudSync();
+        }
+      });
+
+      // Study mode pills
+      document.querySelectorAll('.mode-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.studyMode = btn.dataset.mode;
+          const q = getFilteredQueue();
+          state.currentWordId = q.length ? q[0].id : null;
+          saveState();
+          renderStudyView();
+          resetStudyCardInput();
+        });
+      });
+
+      // Demo quick buttons
+      document.getElementById('try-assess-btn').addEventListener('click', () => {
+        state.studyMode = 'all';
+        const w = state.words.find(x => x.word.toLowerCase() === 'assess');
+        if (w) {
+          state.currentWordId = w.id;
+          renderStudyView();
+          document.getElementById('answer-input').value = '通过';
+          document.getElementById('answer-form').dispatchEvent(new Event('submit'));
+        }
+      });
+
+      document.getElementById('jump-contribute-btn').addEventListener('click', () => {
+        state.studyMode = 'all';
+        const w = state.words.find(x => x.word.toLowerCase() === 'contribute');
+        if (w) {
+          state.currentWordId = w.id;
+          renderStudyView();
+          document.getElementById('answer-input').value = '贡献';
+          document.getElementById('answer-form').dispatchEvent(new Event('submit'));
+        }
+      });
+
+      document.getElementById('dismiss-tip-btn').addEventListener('click', () => {
+        state.tipDismissed = true;
+        saveState();
+        document.getElementById('demo-tip-banner').classList.add('hidden');
+      });
+
+      document.getElementById('reset-mode-all-btn').addEventListener('click', () => {
+        state.studyMode = 'all';
+        if (state.words.length) state.currentWordId = state.words[0].id;
+        saveState();
+        renderStudyView();
+        resetStudyCardInput();
+      });
+
+      document.getElementById('go-import-from-empty-btn').addEventListener('click', () => {
+        state.activeTab = 'wordbook';
+        renderAll();
+        document.getElementById('import-modal').classList.remove('hidden');
+      });
+
+      // Queue chip delegation
+      document.getElementById('queue-word-chips').addEventListener('click', e => {
+        const btn = e.target.closest('.queue-chip');
+        if (!btn) return;
+        state.currentWordId = btn.dataset.jumpId;
+        saveState();
+        renderStudyView();
+        resetStudyCardInput();
+      });
+
+      // Prev / Next navigation
+      function moveWord(delta) {
+        const q = getFilteredQueue();
+        if (!q.length) return;
+        const idx = q.findIndex(w => w.id === state.currentWordId);
+        const nextIdx = (idx + delta + q.length) % q.length;
+        state.currentWordId = q[nextIdx].id;
+        saveState();
+        renderStudyView();
+        resetStudyCardInput();
+      }
+      document.getElementById('prev-word-btn').addEventListener('click', () => moveWord(-1));
+      document.getElementById('next-word-skip-btn').addEventListener('click', () => moveWord(1));
+      document.getElementById('next-word-btn').addEventListener('click', () => moveWord(1));
+
+      // Speak word via Web Speech API
+      document.getElementById('speak-word-btn').addEventListener('click', () => {
+        const w = getCurrentWord();
+        if (!w) return;
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(w.word);
+          u.lang = 'en-US';
+          u.rate = 0.92;
+          window.speechSynthesis.speak(u);
+        } else {
+          showToast('当前浏览器不支持语音合成朗读', 'warn');
+        }
+      });
+
+      // Hint toggle
+      document.getElementById('show-hint-btn').addEventListener('click', () => {
+        document.getElementById('example-hint-box').classList.toggle('hidden');
+      });
+
+      // Submit answer for AI evaluation
+      document.getElementById('answer-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        if (isEvaluating) return;
+        const wordObj = getCurrentWord();
+        if (!wordObj) return;
+        const inputVal = document.getElementById('answer-input').value.trim();
+        if (!inputVal) {
+          showToast('请先输入你记住的中文释义，或点击「完全不会」', 'info');
+          return;
+        }
+
+        isEvaluating = true;
+        document.getElementById('submit-btn-text').textContent = '评判中...';
+        try {
+          const result = await evaluateAnswer(wordObj, inputVal);
+          wordObj.status = result.category;
+          wordObj.lastScore = result.score;
+          wordObj.updatedAt = Date.now();
+          if (result.category === 'confused' && result.confusedWords.length) {
+            const names = result.confusedWords.map(c => c.word);
+            wordObj.confusedWith = Array.from(new Set([...(wordObj.confusedWith || []), ...names]));
+          }
+          wordObj.history = wordObj.history || [];
+          wordObj.history.push({
+            at: Date.now(),
+            input: inputVal,
+            score: result.score,
+            category: result.category,
+            evaluation: result.evaluation
+          });
+          state.todayCount += 1;
+          saveState();
+          renderNavigation();
+          renderStudyView();
+          renderEvaluationResult(wordObj, inputVal, result);
+        } finally {
+          isEvaluating = false;
+          document.getElementById('submit-btn-text').textContent = '评判';
+        }
+      });
+
+      // "Don't know" button
+      document.getElementById('dont-know-btn').addEventListener('click', () => {
+        const wordObj = getCurrentWord();
+        if (!wordObj) return;
+        const nearby = (wordObj.confusableIds || []).map(id => CONFUSION_REF_DICT[id]).filter(Boolean);
+        const result = {
+          score: 0,
+          category: 'dont_know',
+          evaluation: `已将「${wordObj.word}」记入「不会」错题列表，请先看标准释义与高频考点义加深印象。`,
+          freqTip: wordObj.freqAdvice || '',
+          confusedWords: nearby
+        };
+        wordObj.status = 'dont_know';
+        wordObj.lastScore = 0;
+        wordObj.updatedAt = Date.now();
+        wordObj.history = wordObj.history || [];
+        wordObj.history.push({ at: Date.now(), input: '', score: 0, category: 'dont_know', evaluation: result.evaluation });
+        state.todayCount += 1;
+        saveState();
+        renderNavigation();
+        renderStudyView();
+        renderEvaluationResult(wordObj, '', result);
+      });
+
+      // Manual status override buttons
+      document.querySelectorAll('.manual-mark-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const wordObj = getCurrentWord();
+          if (!wordObj) return;
+          wordObj.status = btn.dataset.mark;
+          wordObj.updatedAt = Date.now();
+          saveState();
+          renderNavigation();
+          renderStudyView();
+          showToast(`已将 ${wordObj.word} 标记为「${getStatusMeta(wordObj.status).label}」`, 'success');
+        });
+      });
+
+      // Mistakes view filter & actions
+      document.querySelectorAll('.mfilter-card').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.mistakeFilter = btn.dataset.mfilter;
+          saveState();
+          renderMistakesView();
+        });
+      });
+
+      document.getElementById('practice-mistakes-btn').addEventListener('click', () => {
+        const modeMap = { confused: 'confused', dont_know: 'wrong', wrong: 'wrong', partial: 'partial' };
+        state.studyMode = modeMap[state.mistakeFilter] || 'all';
+        const q = getFilteredQueue();
+        if (!q.length) {
+          showToast('当前分类下没有待重测的单词', 'info');
+          return;
+        }
+        state.currentWordId = q[0].id;
+        state.activeTab = 'study';
+        saveState();
+        renderAll();
+        resetStudyCardInput();
+      });
+
+      document.getElementById('mistakes-list').addEventListener('click', e => {
+        const revBtn = e.target.closest('.review-one-btn');
+        if (revBtn) {
+          state.studyMode = 'all';
+          state.currentWordId = revBtn.dataset.reviewId;
+          state.activeTab = 'study';
+          saveState();
+          renderAll();
+          resetStudyCardInput();
+          return;
+        }
+        const clearBtn = e.target.closest('.clear-mistake-btn');
+        if (clearBtn) {
+          const w = state.words.find(x => x.id === clearBtn.dataset.clearMistakeId);
+          if (w) {
+            w.status = 'mastered';
+            w.updatedAt = Date.now();
+            saveState();
+            renderAll();
+            showToast(`已将 ${w.word} 移出错题并标记为已掌握`, 'success');
+          }
+        }
+      });
+
+      // Wordbook search & filter
+      document.getElementById('wordbook-search').addEventListener('input', renderWordbookView);
+      document.getElementById('wordbook-status-filter').addEventListener('change', renderWordbookView);
+
+      document.getElementById('wordbook-tbody').addEventListener('click', e => {
+        const jumpBtn = e.target.closest('.jump-study-btn');
+        if (jumpBtn) {
+          state.studyMode = 'all';
+          state.currentWordId = jumpBtn.dataset.jumpStudyId;
+          state.activeTab = 'study';
+          saveState();
+          renderAll();
+          resetStudyCardInput();
+          return;
+        }
+        const delBtn = e.target.closest('.delete-word-btn');
+        if (delBtn) {
+          const id = delBtn.dataset.deleteWordId;
+          state.words = state.words.filter(w => w.id !== id);
+          if (state.currentWordId === id) state.currentWordId = state.words[0]?.id || null;
+          saveState();
+          renderAll();
+          showToast('已删除该单词', 'info');
+        }
+      });
+
+      // Export CSV
+      document.getElementById('export-csv-btn').addEventListener('click', () => {
+        const rows = [['word', 'phonetic', 'meaning', 'highFreqMeaning', 'status', 'lastScore', 'confusedWith']];
+        state.words.forEach(w => {
+          rows.push([
+            w.word,
+            w.phonetic || '',
+            w.meaning,
+            w.highFreqMeaning || '',
+            w.status,
+            w.lastScore ?? '',
+            (w.confusedWith || []).join('|')
+          ]);
+        });
+        const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `lexisync_wordbook_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        showToast('已导出 CSV 词表', 'success');
+      });
+
+      // Import Modal
+      const importModal = document.getElementById('import-modal');
+      document.getElementById('open-import-modal-btn').addEventListener('click', () => importModal.classList.remove('hidden'));
+      document.getElementById('close-import-modal').addEventListener('click', () => importModal.classList.add('hidden'));
+      document.getElementById('cancel-import-btn').addEventListener('click', () => importModal.classList.add('hidden'));
+
+      document.getElementById('import-file-input').addEventListener('change', e => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          document.getElementById('import-textarea').value = ev.target.result || '';
+        };
+        reader.readAsText(file, 'utf-8');
+      });
+
+      document.getElementById('confirm-import-btn').addEventListener('click', () => {
+        const raw = document.getElementById('import-textarea').value.trim();
+        if (!raw) {
+          showToast('请先粘贴单词内容或选择文件', 'warn');
+          return;
+        }
+        const replace = document.getElementById('import-replace-toggle').checked;
+        const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        const imported = [];
+        for (const line of lines) {
+          if (/^word\s*[,\t]/i.test(line)) continue; // skip header row
+          let parts = line.includes('\t') ? line.split('\t') : line.split(/[,，]/);
+          if (parts.length < 2 && line.includes(' - ')) parts = line.split(' - ');
+          if (parts.length < 2) continue;
+          const word = parts[0].replace(/^"|"$/g, '').trim();
+          const meaning = parts[1].replace(/^"|"$/g, '').trim();
+          const highFreq = (parts[2] || '').replace(/^"|"$/g, '').trim();
+          const exampleEn = (parts[3] || '').replace(/^"|"$/g, '').trim();
+          if (!word || !meaning) continue;
+          imported.push({
+            id: 'w_' + word.toLowerCase().replace(/[^a-z0-9]/g, '') + '_' + Math.random().toString(36).slice(2, 6),
+            word,
+            phonetic: '',
+            pos: '',
+            meaning,
+            highFreqMeaning: highFreq || meaning,
+            coreKeywords: extractTokens(highFreq || meaning),
+            secondaryKeywords: extractTokens(meaning),
+            exampleEn,
+            exampleZh: '',
+            confusableIds: [],
+            status: 'new',
+            lastScore: null,
+            confusedWith: [],
+            history: [],
+            updatedAt: Date.now()
+          });
+        }
+
+        if (imported.length === 0) {
+          showToast('未能解析出有效词条，请检查格式（单词, 释义）', 'error');
+          return;
+        }
+
+        if (replace) {
+          state.words = imported;
+        } else {
+          state.words = mergeWordLists(state.words, imported);
+        }
+        state.currentWordId = state.words[0]?.id || null;
+        saveState();
+        importModal.classList.add('hidden');
+        document.getElementById('import-textarea').value = '';
+        renderAll();
+        showToast(`成功导入 ${imported.length} 个单词！`, 'success');
+      });
+
+      // Add Single Word Modal
+      const addModal = document.getElementById('add-word-modal');
+      document.getElementById('open-add-word-modal-btn').addEventListener('click', () => addModal.classList.remove('hidden'));
+      document.getElementById('close-add-modal').addEventListener('click', () => addModal.classList.add('hidden'));
+      document.getElementById('cancel-add-btn').addEventListener('click', () => addModal.classList.add('hidden'));
+
+      document.getElementById('add-word-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const word = document.getElementById('new-word-en').value.trim();
+        const phonetic = document.getElementById('new-word-phonetic').value.trim();
+        const meaning = document.getElementById('new-word-meaning').value.trim();
+        const highFreq = document.getElementById('new-word-highfreq').value.trim();
+        const exampleEn = document.getElementById('new-word-example').value.trim();
+        if (!word || !meaning) return;
+
+        const newObj = {
+          id: 'w_' + Date.now(),
+          word,
+          phonetic,
+          pos: '',
+          meaning,
+          highFreqMeaning: highFreq || meaning,
+          coreKeywords: extractTokens(highFreq || meaning),
+          secondaryKeywords: extractTokens(meaning),
+          exampleEn,
+          exampleZh: '',
+          confusableIds: [],
+          status: 'new',
+          lastScore: null,
+          confusedWith: [],
+          history: [],
+          updatedAt: Date.now()
+        };
+        state.words.unshift(newObj);
+        state.currentWordId = newObj.id;
+        saveState();
+        addModal.classList.add('hidden');
+        e.target.reset();
+        renderAll();
+        showToast(`已添加单词「${word}」`, 'success');
+      });
+
+      // Sync Settings Events
+      document.getElementById('device-name-input').addEventListener('change', e => {
+        state.deviceName = e.target.value.trim() || detectDeviceName();
+        saveState();
+      });
+
+      document.querySelectorAll('.sync-provider-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.syncConfig.provider = btn.dataset.provider;
+          saveState();
+          renderSyncView();
+        });
+      });
+
+      document.getElementById('save-sync-cfg-btn').addEventListener('click', () => {
+        state.syncConfig.supabaseUrl = document.getElementById('sb-url').value.trim();
+        state.syncConfig.supabaseKey = document.getElementById('sb-key').value.trim();
+        state.syncConfig.supabaseSyncId = document.getElementById('sb-sync-id').value.trim();
+        state.syncConfig.onedriveToken = document.getElementById('od-token').value.trim();
+        state.syncConfig.onedrivePath = document.getElementById('od-path').value.trim();
+        state.syncConfig.webdavUrl = document.getElementById('wd-url').value.trim();
+        state.syncConfig.webdavUser = document.getElementById('wd-user').value.trim();
+        state.syncConfig.webdavPass = document.getElementById('wd-pass').value.trim();
+        saveState();
+        renderNavigation();
+        showToast('云同步配置已保存', 'success');
+      });
+
+      document.getElementById('sync-now-btn').addEventListener('click', performCloudSync);
+
+      document.getElementById('copy-sql-btn').addEventListener('click', () => {
+        const sql = document.getElementById('supabase-sql-code').textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(sql).then(() => showToast('已复制建表 SQL', 'success')).catch(() => fallbackCopy(sql));
+        } else {
+          fallbackCopy(sql);
+        }
+      });
+
+      function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); showToast('已复制建表 SQL', 'success'); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+
+      // Export / Import JSON backup
+      document.getElementById('export-json-btn').addEventListener('click', () => {
+        const data = JSON.stringify({ words: state.words, exportedAt: Date.now(), device: state.deviceName }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `lexisync_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        showToast('已导出完整 JSON 备份', 'success');
+      });
+
+      document.getElementById('import-json-input').addEventListener('change', e => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            if (!Array.isArray(parsed.words)) throw new Error('无效备份文件');
+            state.words = mergeWordLists(state.words, parsed.words);
+            saveState();
+            renderAll();
+            showToast(`已成功合并备份中的 ${parsed.words.length} 个词条`, 'success');
+          } catch (err) {
+            showToast('备份文件格式不正确', 'error');
+          }
+        };
+        reader.readAsText(file, 'utf-8');
+        e.target.value = '';
+      });
+
+      // AI Config Events
+      document.getElementById('save-ai-cfg-btn').addEventListener('click', () => {
+        state.aiConfig.enabled = document.getElementById('ai-enable-toggle').checked;
+        state.aiConfig.baseUrl = document.getElementById('ai-base-url').value.trim();
+        state.aiConfig.apiKey = document.getElementById('ai-api-key').value.trim();
+        state.aiConfig.model = document.getElementById('ai-model').value.trim() || 'deepseek-chat';
+        saveState();
+        renderStudyView();
+        showToast(state.aiConfig.enabled ? '已启用外部大模型 AI 评判' : '已切换为内置智能评判引擎', 'success');
+      });
+
+      document.getElementById('reset-demo-data-btn').addEventListener('click', () => {
+        state.words = JSON.parse(JSON.stringify(DEFAULT_WORDS));
+        state.currentWordId = state.words[0].id;
+        state.studyMode = 'all';
+        state.todayCount = 0;
+        saveState();
+        renderAll();
+        resetStudyCardInput();
+        showToast('已恢复默认示例词库与初始状态', 'info');
+      });
+    }
+
+    // Boot
+    window.addEventListener('DOMContentLoaded', () => {
+      initEvents();
+      renderAll();
+    });
+  </script>
+</body>
+</html>
