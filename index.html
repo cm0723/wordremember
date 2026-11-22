@@ -444,10 +444,43 @@
           </div>
 
           <!-- Provider Selector -->
-          <div class="grid grid-cols-3 gap-2">
-            <button type="button" data-provider="supabase" class="sync-provider-btn px-3 py-2 rounded-xl border text-xs font-semibold transition-all">Supabase 云</button>
-            <button type="button" data-provider="onedrive" class="sync-provider-btn px-3 py-2 rounded-xl border text-xs font-semibold transition-all">OneDrive 网盘</button>
-            <button type="button" data-provider="webdav" class="sync-provider-btn px-3 py-2 rounded-xl border text-xs font-semibold transition-all">WebDAV 网盘</button>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button type="button" data-provider="gitee" class="sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all">Gitee 国内</button>
+            <button type="button" data-provider="supabase" class="sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all">Supabase 云</button>
+            <button type="button" data-provider="onedrive" class="sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all">OneDrive 网盘</button>
+            <button type="button" data-provider="webdav" class="sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all">WebDAV 网盘</button>
+          </div>
+
+          <!-- Gitee Config -->
+          <div id="cfg-gitee" class="sync-cfg-panel space-y-3 text-xs">
+            <p class="text-slate-500 leading-relaxed">中国境内直连、永久免费、无需建表。利用 Gitee 个人私有仓库存储同步文件，四台设备填同一套配置即可随时双向合并。</p>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Gitee 私人令牌 (Access Token)</label>
+              <input id="gt-token" type="password" placeholder="在 Gitee 设置 → 私人令牌中生成（勾选 projects 权限）" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Gitee 用户名 (个人空间地址)</label>
+                <input id="gt-owner" type="text" placeholder="例如：cm0723" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">私有仓库名 (Repo)</label>
+                <input id="gt-repo" type="text" placeholder="例如：vocab-sync" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">分支名 (默认 master)</label>
+                <input id="gt-branch" type="text" value="master" placeholder="master" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">同步文件名</label>
+                <input id="gt-path" type="text" value="lexisync_data.json" placeholder="lexisync_data.json" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-900 leading-relaxed">
+              提示：新建 Gitee 私有仓库时请勾选「使用 Readme 文件初始化这个仓库」（确保 master 分支已生成），随后保存配置并点「立即双向同步」即可自动创建同步文件。
+            </div>
           </div>
 
           <!-- Supabase Config -->
@@ -482,18 +515,46 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
 
           <!-- OneDrive Config -->
           <div id="cfg-onedrive" class="sync-cfg-panel hidden space-y-3 text-xs">
-            <p class="text-slate-500 leading-relaxed">通过 Microsoft Graph API 将同步文件 <code class="font-mono bg-slate-100 px-1 rounded">lexisync_data.json</code> 直接存入你的个人 OneDrive（不经过任何第三方服务器）。</p>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">OneDrive Graph Access Token</label>
-              <input id="od-token" type="password" placeholder="粘贴 Microsoft Graph Explorer 或 Azure 应用获取的 Bearer Token" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+            <p class="text-slate-500 leading-relaxed">通过 Microsoft Graph API 将同步文件 <code class="font-mono bg-slate-100 px-1 rounded">lexisync_data.json</code> 直接存入你的个人 OneDrive（支持 OAuth 一键登录与自动续期，不经过任何第三方服务器）。</p>
+
+            <!-- OAuth Login Status Box -->
+            <div id="od-auth-status-box" class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <span id="od-auth-dot" class="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0"></span>
+                <span id="od-auth-text" class="font-semibold text-slate-700 truncate">尚未登录 OneDrive</span>
+              </div>
+              <button id="od-logout-btn" type="button" class="hidden text-rose-600 hover:text-rose-800 font-semibold">退出登录</button>
             </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Azure 应用程序 (客户端) ID (Client ID)</label>
+              <input id="od-client-id" type="text" placeholder="例如：12345678-abcd-efgh-ijkl-1234567890ab" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="font-semibold text-slate-700">重定向 URI（在 Azure 注册 SPA 平台时粘贴此地址）</label>
+                <button id="copy-od-redirect-btn" type="button" class="text-indigo-600 hover:text-indigo-800 font-semibold">复制地址</button>
+              </div>
+              <input id="od-redirect-uri" type="text" readonly class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-mono text-[11px] outline-none" />
+            </div>
+
+            <button id="od-login-btn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center justify-center gap-2 shadow-sm transition-colors">
+              <i data-lucide="log-in" class="w-4 h-4"></i>
+              <span>登录微软账号授权 OneDrive（自动续期）</span>
+            </button>
+
             <div>
               <label class="block font-semibold text-slate-700 mb-1">同步文件路径</label>
               <input id="od-path" type="text" value="/me/drive/root:/LexiSync/lexisync_data.json:/content" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
             </div>
-            <div class="p-3 rounded-xl bg-blue-50/70 border border-blue-200/70 text-blue-900 leading-relaxed">
-              提示：在 Microsoft Graph Explorer 登录个人微软账号并勾选 <code class="font-mono">Files.ReadWrite</code> 即可快速获取令牌；若长期免登录刷新，建议部署到静态托管并配置 Azure AD SPA Client ID。
-            </div>
+
+            <details class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+              <summary class="cursor-pointer font-semibold text-slate-600 select-none">高级：手动粘贴临时 Access Token（仅测试用）</summary>
+              <div class="mt-2.5">
+                <input id="od-token" type="password" placeholder="粘贴 Microsoft Graph Explorer 获取的临时 Bearer Token" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:border-indigo-500 outline-none" />
+              </div>
+            </details>
           </div>
 
           <!-- WebDAV Config -->
@@ -933,11 +994,20 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
         deviceName: detectDeviceName(),
         lastSyncAt: null,
         syncConfig: {
-          provider: 'supabase',
+          provider: 'gitee',
+          giteeToken: '',
+          giteeOwner: '',
+          giteeRepo: '',
+          giteeBranch: 'master',
+          giteePath: 'lexisync_data.json',
           supabaseUrl: '',
           supabaseKey: '',
           supabaseSyncId: '',
+          onedriveClientId: '',
           onedriveToken: '',
+          onedriveRefreshToken: '',
+          onedriveTokenExpiresAt: 0,
+          onedriveAccount: '',
           onedrivePath: '/me/drive/root:/LexiSync/lexisync_data.json:/content',
           webdavUrl: '',
           webdavUser: '',
@@ -1343,8 +1413,9 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
       // Header sync indicator
       const syncText = document.getElementById('sync-status-text');
       const syncDot = document.getElementById('sync-dot');
-      const hasCloud = (state.syncConfig.provider === 'supabase' && state.syncConfig.supabaseUrl && state.syncConfig.supabaseKey) ||
-                       (state.syncConfig.provider === 'onedrive' && state.syncConfig.onedriveToken) ||
+      const hasCloud = (state.syncConfig.provider === 'gitee' && state.syncConfig.giteeToken && state.syncConfig.giteeOwner && state.syncConfig.giteeRepo) ||
+                       (state.syncConfig.provider === 'supabase' && state.syncConfig.supabaseUrl && state.syncConfig.supabaseKey) ||
+                       (state.syncConfig.provider === 'onedrive' && (state.syncConfig.onedriveToken || state.syncConfig.onedriveRefreshToken)) ||
                        (state.syncConfig.provider === 'webdav' && state.syncConfig.webdavUrl);
       if (hasCloud) {
         syncText.textContent = state.lastSyncAt ? '已云同步' : '云端就绪';
@@ -1632,11 +1703,35 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
         p.classList.toggle('hidden', p.id !== `cfg-${prov}`);
       });
 
+      document.getElementById('gt-token').value = state.syncConfig.giteeToken || '';
+      document.getElementById('gt-owner').value = state.syncConfig.giteeOwner || '';
+      document.getElementById('gt-repo').value = state.syncConfig.giteeRepo || '';
+      document.getElementById('gt-branch').value = state.syncConfig.giteeBranch || 'master';
+      document.getElementById('gt-path').value = state.syncConfig.giteePath || 'lexisync_data.json';
       document.getElementById('sb-url').value = state.syncConfig.supabaseUrl || '';
       document.getElementById('sb-key').value = state.syncConfig.supabaseKey || '';
       document.getElementById('sb-sync-id').value = state.syncConfig.supabaseSyncId || '';
+      document.getElementById('od-client-id').value = state.syncConfig.onedriveClientId || '';
+      document.getElementById('od-redirect-uri').value = getOneDriveRedirectUri();
       document.getElementById('od-token').value = state.syncConfig.onedriveToken || '';
       document.getElementById('od-path').value = state.syncConfig.onedrivePath || '/me/drive/root:/LexiSync/lexisync_data.json:/content';
+
+      const odDot = document.getElementById('od-auth-dot');
+      const odText = document.getElementById('od-auth-text');
+      const odLogout = document.getElementById('od-logout-btn');
+      if (state.syncConfig.onedriveRefreshToken) {
+        odDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
+        odText.textContent = `已授权 OneDrive：${state.syncConfig.onedriveAccount || '个人微软账号'}（支持自动续期）`;
+        odLogout.classList.remove('hidden');
+      } else if (state.syncConfig.onedriveToken) {
+        odDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0';
+        odText.textContent = '已填入临时 Token（约 1 小时后过期）';
+        odLogout.classList.remove('hidden');
+      } else {
+        odDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0';
+        odText.textContent = '尚未登录 OneDrive（填入 Client ID 后点击下方按钮授权）';
+        odLogout.classList.add('hidden');
+      }
       document.getElementById('wd-url').value = state.syncConfig.webdavUrl || '';
       document.getElementById('wd-user').value = state.syncConfig.webdavUser || '';
       document.getElementById('wd-pass').value = state.syncConfig.webdavPass || '';
@@ -1669,13 +1764,257 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
       return Array.from(map.values());
     }
 
+    const OD_PKCE_KEY = 'lexisync_od_pkce_v1';
+    const OD_SCOPE = 'offline_access Files.ReadWrite User.Read';
+
+    function getOneDriveRedirectUri() {
+      try {
+        if (window.location.protocol === 'https:' && window.location.host) {
+          return window.location.origin + window.location.pathname;
+        }
+      } catch (e) {}
+      return 'https://cm0723.github.io/wordremember/';
+    }
+
+    function base64UrlEncode(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let bin = '';
+      for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function generatePkceVerifier() {
+      const arr = new Uint8Array(32);
+      window.crypto.getRandomValues(arr);
+      return base64UrlEncode(arr);
+    }
+
+    async function generatePkceChallenge(verifier) {
+      const data = new TextEncoder().encode(verifier);
+      const digest = await window.crypto.subtle.digest('SHA-256', data);
+      return base64UrlEncode(digest);
+    }
+
+    async function startOneDriveLogin() {
+      const clientId = (document.getElementById('od-client-id').value || '').trim();
+      if (!clientId) {
+        showToast('请先填写 Azure 应用程序 (客户端) ID (Client ID)', 'warn');
+        return;
+      }
+      state.syncConfig.provider = 'onedrive';
+      state.syncConfig.onedriveClientId = clientId;
+      saveState();
+
+      if (!window.crypto || !window.crypto.subtle) {
+        showToast('当前环境不支持 Web Crypto PKCE，请在 HTTPS 网页中使用', 'error');
+        return;
+      }
+
+      const redirectUri = getOneDriveRedirectUri();
+      const verifier = generatePkceVerifier();
+      const challenge = await generatePkceChallenge(verifier);
+      const oauthState = generatePkceVerifier().slice(0, 16);
+
+      try {
+        localStorage.setItem(OD_PKCE_KEY, JSON.stringify({ verifier, redirectUri, oauthState, clientId }));
+      } catch (e) {}
+
+      const params = new URLSearchParams({
+        client_id: clientId,
+        response_type: 'code',
+        redirect_uri: redirectUri,
+        response_mode: 'query',
+        scope: OD_SCOPE,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        state: oauthState,
+        prompt: 'select_account'
+      });
+      window.location.href = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
+    }
+
+    async function handleOneDriveOAuthCallback() {
+      let params;
+      try {
+        params = new URLSearchParams(window.location.search);
+      } catch (e) {
+        return;
+      }
+      const code = params.get('code');
+      const err = params.get('error');
+      const errDesc = params.get('error_description');
+      if (!code && !err) return;
+
+      // Clean URL query params immediately
+      try {
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+      } catch (e) {}
+
+      if (err) {
+        showToast(`微软登录未完成：${errDesc || err}`, 'error');
+        return;
+      }
+
+      let pkceData = null;
+      try {
+        pkceData = JSON.parse(localStorage.getItem(OD_PKCE_KEY) || 'null');
+        localStorage.removeItem(OD_PKCE_KEY);
+      } catch (e) {}
+
+      if (!pkceData || !pkceData.verifier) {
+        showToast('授权会话已失效，请重新点击登录 OneDrive', 'warn');
+        return;
+      }
+
+      showToast('正在完成 OneDrive 授权...', 'info');
+      try {
+        const body = new URLSearchParams({
+          client_id: pkceData.clientId || state.syncConfig.onedriveClientId,
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: pkceData.redirectUri,
+          code_verifier: pkceData.verifier,
+          scope: OD_SCOPE
+        });
+        const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+        const data = await res.json();
+        if (!res.ok || !data.access_token) {
+          throw new Error(data.error_description || data.error || 'Token 换取失败');
+        }
+
+        state.syncConfig.provider = 'onedrive';
+        state.syncConfig.onedriveClientId = pkceData.clientId || state.syncConfig.onedriveClientId;
+        state.syncConfig.onedriveToken = data.access_token;
+        state.syncConfig.onedriveRefreshToken = data.refresh_token || '';
+        state.syncConfig.onedriveTokenExpiresAt = Date.now() + ((Number(data.expires_in) || 3600) * 1000);
+
+        // Fetch user display name / email
+        try {
+          const meRes = await fetch('https://graph.microsoft.com/v1.0/me', {
+            headers: { 'Authorization': `Bearer ${data.access_token}` }
+          });
+          if (meRes.ok) {
+            const me = await meRes.json();
+            state.syncConfig.onedriveAccount = me.userPrincipalName || me.mail || me.displayName || '已登录微软账号';
+          }
+        } catch (e) {}
+
+        state.activeTab = 'sync';
+        saveState();
+        renderAll();
+        showToast('OneDrive 授权成功！正在执行首次双向同步...', 'success');
+        await performCloudSync();
+      } catch (e) {
+        showToast(`OneDrive 授权失败：${e.message}`, 'error');
+      }
+    }
+
+    async function ensureValidOneDriveToken() {
+      const cfg = state.syncConfig;
+      const now = Date.now();
+      // If we have a valid access token (or manual token with expiresAt === 0)
+      if (cfg.onedriveToken && (!cfg.onedriveTokenExpiresAt || now < cfg.onedriveTokenExpiresAt - 120000)) {
+        return cfg.onedriveToken;
+      }
+      // Auto-refresh using refresh_token
+      if (cfg.onedriveRefreshToken && cfg.onedriveClientId) {
+        const body = new URLSearchParams({
+          client_id: cfg.onedriveClientId,
+          grant_type: 'refresh_token',
+          refresh_token: cfg.onedriveRefreshToken,
+          scope: OD_SCOPE
+        });
+        const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+        const data = await res.json();
+        if (!res.ok || !data.access_token) {
+          throw new Error('授权已过期，请点击「登录微软账号授权 OneDrive」重新登录');
+        }
+        cfg.onedriveToken = data.access_token;
+        if (data.refresh_token) cfg.onedriveRefreshToken = data.refresh_token;
+        cfg.onedriveTokenExpiresAt = Date.now() + ((Number(data.expires_in) || 3600) * 1000);
+        saveState();
+        return cfg.onedriveToken;
+      }
+      throw new Error('请先在「同步与AI设置」登录微软账号授权 OneDrive');
+    }
+
     async function performCloudSync() {
       const cfg = state.syncConfig;
       const syncText = document.getElementById('sync-status-text');
       syncText.textContent = '同步中...';
 
+      const utf8ToBase64 = str => {
+        const bytes = new TextEncoder().encode(str);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin);
+      };
+      const base64ToUtf8 = b64 => {
+        const bin = atob(String(b64 || '').replace(/\s+/g, ''));
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new TextDecoder().decode(bytes);
+      };
+
       try {
-        if (cfg.provider === 'supabase') {
+        if (cfg.provider === 'gitee') {
+          if (!cfg.giteeToken || !cfg.giteeOwner || !cfg.giteeRepo) {
+            showToast('请先填写 Gitee 私人令牌、用户名和私有仓库名', 'warn');
+            renderNavigation();
+            return;
+          }
+          const owner = encodeURIComponent(cfg.giteeOwner.trim());
+          const repo = encodeURIComponent(cfg.giteeRepo.trim());
+          const branch = (cfg.giteeBranch || 'master').trim();
+          const filePath = (cfg.giteePath || 'lexisync_data.json').replace(/^\/+/, '').trim();
+          const baseUrl = `https://gitee.com/api/v5/repos/${owner}/${repo}/contents/${filePath}`;
+
+          let existingSha = null;
+          const getRes = await fetch(`${baseUrl}?access_token=${encodeURIComponent(cfg.giteeToken)}&ref=${encodeURIComponent(branch)}`);
+          if (getRes.ok) {
+            const fileData = await getRes.json();
+            if (fileData && !Array.isArray(fileData) && fileData.content) {
+              existingSha = fileData.sha || null;
+              try {
+                const remoteJson = JSON.parse(base64ToUtf8(fileData.content));
+                if (remoteJson?.words) state.words = mergeWordLists(state.words, remoteJson.words);
+              } catch (parseErr) {}
+            }
+          } else if (getRes.status !== 404) {
+            throw new Error('Gitee 读取失败: HTTP ' + getRes.status);
+          }
+
+          const payloadStr = JSON.stringify({ words: state.words, device: state.deviceName, syncedAt: Date.now() }, null, 2);
+          const bodyObj = {
+            access_token: cfg.giteeToken,
+            content: utf8ToBase64(payloadStr),
+            message: `LexiSync sync from ${state.deviceName} (${new Date().toISOString()})`,
+            branch
+          };
+          if (existingSha) bodyObj.sha = existingSha;
+
+          const writeRes = await fetch(baseUrl, {
+            method: existingSha ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bodyObj)
+          });
+          if (!writeRes.ok) {
+            let errMsg = 'HTTP ' + writeRes.status;
+            try {
+              const errJson = await writeRes.json();
+              if (errJson?.message) errMsg += ' - ' + errJson.message;
+            } catch (e) {}
+            throw new Error('Gitee 写入失败: ' + errMsg);
+          }
+        } else if (cfg.provider === 'supabase') {
           if (!cfg.supabaseUrl || !cfg.supabaseKey || !cfg.supabaseSyncId) {
             showToast('请先在「同步与AI设置」中填写 Supabase URL、Key 和同步口令', 'warn');
             renderNavigation();
@@ -1706,18 +2045,16 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
           });
           if (!upsertRes.ok) throw new Error('Supabase 写入失败: HTTP ' + upsertRes.status);
         } else if (cfg.provider === 'onedrive') {
-          if (!cfg.onedriveToken) {
-            showToast('请先填写 OneDrive Microsoft Graph Access Token', 'warn');
-            renderNavigation();
-            return;
-          }
+          const accessToken = await ensureValidOneDriveToken();
           const path = cfg.onedrivePath.startsWith('/') ? cfg.onedrivePath : '/' + cfg.onedrivePath;
           const url = `https://graph.microsoft.com/v1.0${path}`;
-          const headers = { 'Authorization': `Bearer ${cfg.onedriveToken}` };
+          const headers = { 'Authorization': `Bearer ${accessToken}` };
           const getRes = await fetch(url, { headers });
           if (getRes.ok) {
             const remoteData = await getRes.json();
             if (remoteData?.words) state.words = mergeWordLists(state.words, remoteData.words);
+          } else if (getRes.status !== 404) {
+            throw new Error('OneDrive 读取失败: HTTP ' + getRes.status);
           }
           const putRes = await fetch(url, {
             method: 'PUT',
@@ -1770,8 +2107,9 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
 
       // Header quick sync
       document.getElementById('header-sync-btn').addEventListener('click', () => {
-        const hasCloud = (state.syncConfig.provider === 'supabase' && state.syncConfig.supabaseUrl) ||
-                         (state.syncConfig.provider === 'onedrive' && state.syncConfig.onedriveToken) ||
+        const hasCloud = (state.syncConfig.provider === 'gitee' && state.syncConfig.giteeToken && state.syncConfig.giteeOwner && state.syncConfig.giteeRepo) ||
+                         (state.syncConfig.provider === 'supabase' && state.syncConfig.supabaseUrl) ||
+                         (state.syncConfig.provider === 'onedrive' && (state.syncConfig.onedriveToken || state.syncConfig.onedriveRefreshToken)) ||
                          (state.syncConfig.provider === 'webdav' && state.syncConfig.webdavUrl);
         if (!hasCloud) {
           state.activeTab = 'sync';
@@ -2190,17 +2528,49 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
       });
 
       document.getElementById('save-sync-cfg-btn').addEventListener('click', () => {
+        state.syncConfig.giteeToken = document.getElementById('gt-token').value.trim();
+        state.syncConfig.giteeOwner = document.getElementById('gt-owner').value.trim();
+        state.syncConfig.giteeRepo = document.getElementById('gt-repo').value.trim();
+        state.syncConfig.giteeBranch = document.getElementById('gt-branch').value.trim() || 'master';
+        state.syncConfig.giteePath = document.getElementById('gt-path').value.trim() || 'lexisync_data.json';
         state.syncConfig.supabaseUrl = document.getElementById('sb-url').value.trim();
         state.syncConfig.supabaseKey = document.getElementById('sb-key').value.trim();
         state.syncConfig.supabaseSyncId = document.getElementById('sb-sync-id').value.trim();
-        state.syncConfig.onedriveToken = document.getElementById('od-token').value.trim();
+        state.syncConfig.onedriveClientId = document.getElementById('od-client-id').value.trim();
+        const manualTok = document.getElementById('od-token').value.trim();
+        if (manualTok !== state.syncConfig.onedriveToken) {
+          state.syncConfig.onedriveToken = manualTok;
+          if (manualTok && !state.syncConfig.onedriveRefreshToken) state.syncConfig.onedriveTokenExpiresAt = 0;
+        }
         state.syncConfig.onedrivePath = document.getElementById('od-path').value.trim();
         state.syncConfig.webdavUrl = document.getElementById('wd-url').value.trim();
         state.syncConfig.webdavUser = document.getElementById('wd-user').value.trim();
         state.syncConfig.webdavPass = document.getElementById('wd-pass').value.trim();
         saveState();
         renderNavigation();
+        renderSyncView();
         showToast('云同步配置已保存', 'success');
+      });
+
+      document.getElementById('od-login-btn').addEventListener('click', startOneDriveLogin);
+
+      document.getElementById('od-logout-btn').addEventListener('click', () => {
+        state.syncConfig.onedriveToken = '';
+        state.syncConfig.onedriveRefreshToken = '';
+        state.syncConfig.onedriveTokenExpiresAt = 0;
+        state.syncConfig.onedriveAccount = '';
+        saveState();
+        renderAll();
+        showToast('已退出 OneDrive 授权', 'info');
+      });
+
+      document.getElementById('copy-od-redirect-btn').addEventListener('click', () => {
+        const uri = document.getElementById('od-redirect-uri').value;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(uri).then(() => showToast('已复制重定向 URI', 'success')).catch(() => fallbackCopy(uri));
+        } else {
+          fallbackCopy(uri);
+        }
       });
 
       document.getElementById('sync-now-btn').addEventListener('click', performCloudSync);
@@ -2281,6 +2651,7 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
     window.addEventListener('DOMContentLoaded', () => {
       initEvents();
       renderAll();
+      handleOneDriveOAuthCallback();
     });
   </script>
 </body>
