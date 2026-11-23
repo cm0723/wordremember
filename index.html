@@ -364,9 +364,18 @@
           <h2 class="text-xl font-bold text-slate-900">错题与易混词本</h2>
           <p class="text-xs text-slate-500 mt-0.5">自动归档「不会」「错误」「与其他单词记混」以及「高频义遗漏」的词条</p>
         </div>
-        <button id="practice-mistakes-btn" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-1.5 shadow-sm">
-          <i data-lucide="play" class="w-4 h-4"></i>专项重测当前分类
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="export-wrong-csv-btn" type="button" class="px-3.5 py-2 rounded-xl bg-white border border-rose-200 hover:bg-rose-50 text-rose-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span id="export-wrong-csv-label">导出低分错答 CSV (0)</span>
+          </button>
+          <button id="export-wrong-json-btn" type="button" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium flex items-center gap-1.5">
+            <i data-lucide="file-json" class="w-4 h-4"></i>导出 JSON
+          </button>
+          <button id="practice-mistakes-btn" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="play" class="w-4 h-4"></i>专项重测当前分类
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1109,6 +1118,7 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
         unsyncedWordCount: 0,
         pendingAiBatch: [],
         lastBatchReport: null,
+        wrongAnswerLogs: [],
         dailyPlan: {
           selectedBooks: ['common', 'cet4', 'cet6'],
           dailyNewTarget: 30,
@@ -1296,6 +1306,7 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
           unsyncedWordCount: state.unsyncedWordCount,
           pendingAiBatch: (state.pendingAiBatch || []).slice(-50),
           lastBatchReport: state.lastBatchReport || null,
+          wrongAnswerLogs: (state.wrongAnswerLogs || []).slice(-2000),
           dailyPlan: state.dailyPlan,
           syncConfig: state.syncConfig,
           aiConfig: state.aiConfig,
@@ -1642,6 +1653,12 @@ ${JSON.stringify(compactList)}
                   lastH.score = item.aiScore;
                   lastH.category = item.aiCategory;
                   lastH.evaluation = `[AI批校] ${item.note}`;
+                }
+                // Reconcile cloud wrongAnswerLogs based on AI audited score
+                if (item.aiScore >= 80 && item.wrongLogId) {
+                  state.wrongAnswerLogs = (state.wrongAnswerLogs || []).filter(l => l.id !== item.wrongLogId);
+                } else if (item.aiScore <= 40) {
+                  item.wrongLogId = recordLowScoreWrongLog(wObj, item.userInput, item.aiScore, item.aiCategory, `[AI批校] ${item.note}`, item.confusedWords, item.wrongLogId || null);
                 }
               }
             });
@@ -2086,6 +2103,8 @@ ${JSON.stringify(compactList)}
       document.getElementById('count-dont-know').textContent = counts.dont_know;
       document.getElementById('count-wrong').textContent = counts.wrong;
       document.getElementById('count-partial').textContent = counts.partial;
+      const wrongLogLen = (state.wrongAnswerLogs || []).length;
+      document.getElementById('export-wrong-csv-label').textContent = `导出低分错答 CSV (${wrongLogLen})`;
 
       document.querySelectorAll('.mfilter-card').forEach(btn => {
         const active = btn.dataset.mfilter === state.mistakeFilter;
@@ -2373,6 +2392,14 @@ ${JSON.stringify(compactList)}
       if (remote.dailyPlan && (remote.dailyPlan.updatedAt || 0) > (state.dailyPlan.updatedAt || 0)) {
         state.dailyPlan = { ...state.dailyPlan, ...remote.dailyPlan };
       }
+      if (Array.isArray(remote.wrongAnswerLogs) && remote.wrongAnswerLogs.length > 0) {
+        const logMap = new Map();
+        (state.wrongAnswerLogs || []).forEach(l => { if (l && l.id) logMap.set(l.id, l); });
+        remote.wrongAnswerLogs.forEach(rl => { if (rl && rl.id && !logMap.has(rl.id)) logMap.set(rl.id, rl); });
+        state.wrongAnswerLogs = Array.from(logMap.values())
+          .sort((a, b) => (a.at || 0) - (b.at || 0))
+          .slice(-2000);
+      }
     }
 
     function buildSyncPayload() {
@@ -2383,7 +2410,8 @@ ${JSON.stringify(compactList)}
         syncedAt: Date.now(),
         dailyPlan: state.dailyPlan,
         progressMap,
-        customWords
+        customWords,
+        wrongAnswerLogs: (state.wrongAnswerLogs || []).slice(-2000)
       };
     }
 
@@ -2514,6 +2542,36 @@ ${JSON.stringify(compactList)}
           setTimeout(() => performCloudSync({ silent: true }), 800);
         }
       }
+    }
+
+    // Collect low-score wrong answers (score <= 40; skip >= 80) for cloud storage & export
+    function recordLowScoreWrongLog(wordObj, userInput, score, category, evaluation, confusedWords, logId = null) {
+      if (score >= 80 || score > 40) return null;
+      const id = logId || ('wl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6));
+      state.wrongAnswerLogs = state.wrongAnswerLogs || [];
+      const existing = state.wrongAnswerLogs.find(x => x.id === id);
+      const entry = {
+        id,
+        at: Date.now(),
+        studyDay: state.todayStudyDay,
+        device: state.deviceName,
+        wordId: wordObj.id,
+        word: wordObj.word,
+        book: wordObj.book || 'custom',
+        meaning: wordObj.meaning,
+        userInput: userInput || '（不会）',
+        score,
+        category,
+        confusedWith: (confusedWords || []).map(c => typeof c === 'string' ? c : c.word).filter(Boolean),
+        evaluation: evaluation || ''
+      };
+      if (existing) {
+        Object.assign(existing, entry);
+      } else {
+        state.wrongAnswerLogs.push(entry);
+        if (state.wrongAnswerLogs.length > 2000) state.wrongAnswerLogs = state.wrongAnswerLogs.slice(-2000);
+      }
+      return id;
     }
 
     function recordWordPracticeAndMaybeAutoSync(wordObj) {
@@ -2721,6 +2779,7 @@ ${JSON.stringify(compactList)}
           }
           wordObj.history = wordObj.history || [];
           wordObj.history.push({ at: Date.now(), input: inputVal, score: result.score, category: result.category, evaluation: result.evaluation });
+          const wrongLogId = recordLowScoreWrongLog(wordObj, inputVal, result.score, result.category, result.evaluation, result.confusedWords || []);
           state.pendingAiBatch = state.pendingAiBatch || [];
           state.pendingAiBatch.push({
             wordId: wordObj.id,
@@ -2731,12 +2790,17 @@ ${JSON.stringify(compactList)}
             localCategory: result.category,
             localEval: result.evaluation,
             localConfused: result.confusedWords || [],
+            wrongLogId,
             at: Date.now()
           });
           recordWordPracticeAndMaybeAutoSync(wordObj);
           renderNavigation();
           renderStudyView();
           renderEvaluationResult(wordObj, inputVal, result);
+          // Immediately clear input box and keep focus for fast consecutive answering
+          const ansEl = document.getElementById('answer-input');
+          ansEl.value = '';
+          ansEl.focus();
           const batchLimit = Math.max(5, Number(state.aiConfig.batchSize) || 20);
           if (state.pendingAiBatch.length >= batchLimit) {
             setTimeout(() => runBatchAiReview(true), 250);
@@ -2762,6 +2826,7 @@ ${JSON.stringify(compactList)}
         wordObj.lastScore = 0;
         wordObj.history = wordObj.history || [];
         wordObj.history.push({ at: Date.now(), input: '', score: 0, category: 'dont_know', evaluation: result.evaluation });
+        const dkLogId = recordLowScoreWrongLog(wordObj, '（不会）', 0, 'dont_know', result.evaluation, nearby);
         state.pendingAiBatch = state.pendingAiBatch || [];
         state.pendingAiBatch.push({
           wordId: wordObj.id,
@@ -2772,12 +2837,16 @@ ${JSON.stringify(compactList)}
           localCategory: 'dont_know',
           localEval: result.evaluation,
           localConfused: nearby,
+          wrongLogId: dkLogId,
           at: Date.now()
         });
         recordWordPracticeAndMaybeAutoSync(wordObj);
         renderNavigation();
         renderStudyView();
         renderEvaluationResult(wordObj, '', result);
+        const ansEl = document.getElementById('answer-input');
+        ansEl.value = '';
+        ansEl.focus();
         const batchLimit = Math.max(5, Number(state.aiConfig.batchSize) || 20);
         if (state.pendingAiBatch.length >= batchLimit) {
           setTimeout(() => runBatchAiReview(true), 250);
@@ -2803,6 +2872,49 @@ ${JSON.stringify(compactList)}
           saveState();
           renderMistakesView();
         });
+      });
+
+      document.getElementById('export-wrong-csv-btn').addEventListener('click', () => {
+        const logs = state.wrongAnswerLogs || [];
+        if (logs.length === 0) {
+          showToast('目前还没有 40% 以下的错误回答记录', 'info');
+          return;
+        }
+        const rows = [['时间', '学习日', '设备', '词库', '单词', '标准释义', '你的错误输入', '得分(%)', '分类', '疑似混淆词', '评判说明']];
+        logs.forEach(l => {
+          rows.push([
+            new Date(l.at || Date.now()).toLocaleString('zh-CN'),
+            l.studyDay || '',
+            l.device || '',
+            BOOK_META[l.book]?.name || l.book || '',
+            l.word || '',
+            l.meaning || '',
+            l.userInput || '',
+            l.score ?? 0,
+            getStatusMeta(l.category).label,
+            (l.confusedWith || []).join('|'),
+            l.evaluation || ''
+          ]);
+        });
+        const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+        a.download = `lexisync_wrong_answers_${state.todayStudyDay}.csv`;
+        a.click();
+        showToast(`已导出 ${logs.length} 条低分错答记录 (CSV)`, 'success');
+      });
+
+      document.getElementById('export-wrong-json-btn').addEventListener('click', () => {
+        const logs = state.wrongAnswerLogs || [];
+        if (logs.length === 0) {
+          showToast('目前还没有 40% 以下的错误回答记录', 'info');
+          return;
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify({ exportedAt: Date.now(), count: logs.length, wrongAnswerLogs: logs }, null, 2)], { type: 'application/json' }));
+        a.download = `lexisync_wrong_answers_${state.todayStudyDay}.json`;
+        a.click();
+        showToast(`已导出 ${logs.length} 条低分错答记录 (JSON)`, 'success');
       });
 
       document.getElementById('practice-mistakes-btn').addEventListener('click', () => {
