@@ -547,119 +547,33 @@
             <span class="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">增量压缩 · 秒级同步</span>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button type="button" data-provider="gitee" class="sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all">Gitee 国内</button>
-            <button type="button" data-provider="supabase" class="sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all">Supabase 云</button>
-            <button type="button" data-provider="onedrive" class="sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all">OneDrive 网盘</button>
-            <button type="button" data-provider="webdav" class="sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all">WebDAV 网盘</button>
-          </div>
-
+          <!-- Fixed Personal Gitee Sync Panel -->
           <div id="cfg-gitee" class="sync-cfg-panel space-y-3 text-xs">
-            <p class="text-slate-500 leading-relaxed">中国境内直连、永久免费、无需建表。利用 Gitee 个人私有仓库存储同步文件，四台设备填同一套配置即可自动合并进度与每日计划。</p>
+            <div class="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-900 flex items-center justify-between gap-2">
+              <span class="font-semibold flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>已内置个人 Gitee 专属云同步（四端打开即自动登入并同步）</span>
+            </div>
             <div>
               <label class="block font-semibold text-slate-700 mb-1">Gitee 私人令牌 (Access Token)</label>
-              <input id="gt-token" type="password" placeholder="在 Gitee 设置 → 私人令牌中生成（勾选 projects 权限）" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+              <input id="gt-token" type="password" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block font-semibold text-slate-700 mb-1">Gitee 用户名 (仓库网址中的名称)</label>
-                <input id="gt-owner" type="text" placeholder="例如：xiaoming723" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+                <label class="block font-semibold text-slate-700 mb-1">Gitee 用户名</label>
+                <input id="gt-owner" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
               </div>
               <div>
                 <label class="block font-semibold text-slate-700 mb-1">私有仓库名 (Repo)</label>
-                <input id="gt-repo" type="text" placeholder="例如：wordremember" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+                <input id="gt-repo" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block font-semibold text-slate-700 mb-1">分支名 (默认 master)</label>
-                <input id="gt-branch" type="text" value="master" placeholder="master" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
+                <label class="block font-semibold text-slate-700 mb-1">分支名</label>
+                <input id="gt-branch" type="text" value="master" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
               </div>
               <div>
                 <label class="block font-semibold text-slate-700 mb-1">同步文件名</label>
-                <input id="gt-path" type="text" value="lexisync_data.json" placeholder="lexisync_data.json" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
-              </div>
-            </div>
-          </div>
-
-          <div id="cfg-supabase" class="sync-cfg-panel hidden space-y-3 text-xs">
-            <p class="text-slate-500 leading-relaxed">支持 Supabase 或国内版 MemFire Cloud，四台设备填相同配置与同步口令即可。</p>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">Supabase / MemFire Project URL</label>
-              <input id="sb-url" type="url" placeholder="https://xxxx.supabase.co" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
-            </div>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">Anon Public Key</label>
-              <input id="sb-key" type="password" placeholder="eyJhbGciOi..." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
-            </div>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">个人同步口令（Sync ID，四端填一致）</label>
-              <input id="sb-sync-id" type="text" placeholder="例如：my-vocab-sync-2026" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
-            </div>
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-slate-700">首次使用：在 SQL Editor 执行建表语句</span>
-                <button id="copy-sql-btn" type="button" class="text-indigo-600 hover:text-indigo-800 font-semibold">复制 SQL</button>
-              </div>
-              <pre id="supabase-sql-code" class="text-[11px] font-mono text-slate-600 overflow-x-auto whitespace-pre-wrap">create table if not exists vocab_sync (
-  sync_id text primary key,
-  payload jsonb not null,
-  updated_at timestamptz default now()
-);
-alter table vocab_sync enable row level security;
-create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with check (true);</pre>
-            </div>
-          </div>
-
-          <div id="cfg-onedrive" class="sync-cfg-panel hidden space-y-3 text-xs">
-            <div id="od-auth-status-box" class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-2 min-w-0">
-                <span id="od-auth-dot" class="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0"></span>
-                <span id="od-auth-text" class="font-semibold text-slate-700 truncate">尚未登录 OneDrive</span>
-              </div>
-              <button id="od-logout-btn" type="button" class="hidden text-rose-600 hover:text-rose-800 font-semibold">退出登录</button>
-            </div>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">Azure 应用程序 (客户端) ID (Client ID)</label>
-              <input id="od-client-id" type="text" placeholder="12345678-abcd-efgh-ijkl-1234567890ab" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
-            </div>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-700">重定向 URI</label>
-                <button id="copy-od-redirect-btn" type="button" class="text-indigo-600 hover:text-indigo-800 font-semibold">复制地址</button>
-              </div>
-              <input id="od-redirect-uri" type="text" readonly class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-mono text-[11px] outline-none" />
-            </div>
-            <button id="od-login-btn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center justify-center gap-2 shadow-sm transition-colors">
-              <i data-lucide="log-in" class="w-4 h-4"></i>
-              <span>登录微软账号授权 OneDrive（自动续期）</span>
-            </button>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">同步文件路径</label>
-              <input id="od-path" type="text" value="/me/drive/root:/LexiSync/lexisync_data.json:/content" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
-            </div>
-            <details class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-              <summary class="cursor-pointer font-semibold text-slate-600 select-none">高级：手动粘贴临时 Access Token</summary>
-              <div class="mt-2.5">
-                <input id="od-token" type="password" placeholder="粘贴临时 Bearer Token" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:border-indigo-500 outline-none" />
-              </div>
-            </details>
-          </div>
-
-          <div id="cfg-webdav" class="sync-cfg-panel hidden space-y-3 text-xs">
-            <p class="text-slate-500 leading-relaxed">兼容支持 HTTPS WebDAV 的网盘服务。</p>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">WebDAV 文件完整 URL</label>
-              <input id="wd-url" type="url" placeholder="https://dav.jianguoyun.com/dav/LexiSync/data.json" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-semibold text-slate-700 mb-1">账号</label>
-                <input id="wd-user" type="text" placeholder="邮箱/用户名" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label class="block font-semibold text-slate-700 mb-1">应用专用密码</label>
-                <input id="wd-pass" type="password" placeholder="应用密码" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none" />
+                <input id="gt-path" type="text" value="lexisync_data.json" class="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-[11px] focus:border-indigo-500 outline-none" />
               </div>
             </div>
           </div>
@@ -679,7 +593,7 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
         <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="font-bold text-slate-900 flex items-center gap-2">
-              <i data-lucide="cpu" class="w-4 h-4 text-indigo-600"></i>AI 语义评判引擎
+              <i data-lucide="cpu" class="w-4 h-4 text-indigo-600"></i>DeepSeek 批量校对引擎（已预置）
             </h3>
             <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
               <input id="ai-enable-toggle" type="checkbox" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
@@ -1165,30 +1079,18 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
           provider: 'gitee',
           autoSyncOnOpen: true,
           autoSyncEvery: 5,
-          giteeToken: '',
-          giteeOwner: '',
-          giteeRepo: '',
+          giteeToken: 'c75c02590ff4f5aeb47bf54c0b76592a',
+          giteeOwner: 'xiaoming723',
+          giteeRepo: 'wordremember',
           giteeBranch: 'master',
-          giteePath: 'lexisync_data.json',
-          supabaseUrl: '',
-          supabaseKey: '',
-          supabaseSyncId: '',
-          onedriveClientId: '',
-          onedriveToken: '',
-          onedriveRefreshToken: '',
-          onedriveTokenExpiresAt: 0,
-          onedriveAccount: '',
-          onedrivePath: '/me/drive/root:/LexiSync/lexisync_data.json:/content',
-          webdavUrl: '',
-          webdavUser: '',
-          webdavPass: ''
+          giteePath: 'lexisync_data.json'
         },
         aiConfig: {
-          enabled: false,
+          enabled: true,
           batchSize: 20,
           baseUrl: 'https://api.deepseek.com/v1',
-          apiKey: '',
-          model: 'deepseek-chat'
+          apiKey: 'sk-0af2f88616c242b4bc36fd14ddb304f0',
+          model: 'v4Flash1017'
         }
       };
     }
@@ -1290,8 +1192,22 @@ create policy "allow_all_by_sync_id" on vocab_sync for all using (true) with che
             ...parsed,
             words: fallback.words,
             dailyPlan: { ...fallback.dailyPlan, ...(parsed.dailyPlan || {}) },
-            syncConfig: { ...fallback.syncConfig, ...(parsed.syncConfig || {}) },
-            aiConfig: { ...fallback.aiConfig, ...(parsed.aiConfig || {}) }
+            syncConfig: {
+              ...fallback.syncConfig,
+              ...(parsed.syncConfig || {}),
+              provider: 'gitee',
+              giteeToken: (parsed.syncConfig && parsed.syncConfig.giteeToken) || fallback.syncConfig.giteeToken,
+              giteeOwner: (parsed.syncConfig && parsed.syncConfig.giteeOwner && parsed.syncConfig.giteeOwner !== 'xiao_ming723') ? parsed.syncConfig.giteeOwner : fallback.syncConfig.giteeOwner,
+              giteeRepo: (parsed.syncConfig && parsed.syncConfig.giteeRepo) || fallback.syncConfig.giteeRepo
+            },
+            aiConfig: {
+              ...fallback.aiConfig,
+              ...(parsed.aiConfig || {}),
+              enabled: true,
+              baseUrl: (parsed.aiConfig && parsed.aiConfig.baseUrl) || fallback.aiConfig.baseUrl,
+              apiKey: (parsed.aiConfig && parsed.aiConfig.apiKey) || fallback.aiConfig.apiKey,
+              model: (!parsed.aiConfig || !parsed.aiConfig.model || parsed.aiConfig.model === 'deepseek-chat') ? fallback.aiConfig.model : parsed.aiConfig.model
+            }
           };
           applyProgressToWords(merged.words, parsed.progressMap, parsed.customWords);
           const curDay = getBeijingStudyDay();
@@ -1916,10 +1832,7 @@ ${JSON.stringify(compactList)}
 
     function hasCloudSyncConfigured() {
       const cfg = state.syncConfig;
-      return (cfg.provider === 'gitee' && cfg.giteeToken && cfg.giteeOwner && cfg.giteeRepo) ||
-             (cfg.provider === 'supabase' && cfg.supabaseUrl && cfg.supabaseKey && cfg.supabaseSyncId) ||
-             (cfg.provider === 'onedrive' && (cfg.onedriveToken || cfg.onedriveRefreshToken)) ||
-             (cfg.provider === 'webdav' && cfg.webdavUrl && cfg.webdavUser);
+      return !!(cfg.giteeToken && cfg.giteeOwner && cfg.giteeRepo);
     }
 
     function renderAll() {
@@ -2353,162 +2266,17 @@ ${JSON.stringify(compactList)}
       document.getElementById('auto-sync-open-toggle').checked = !!state.syncConfig.autoSyncOnOpen;
       document.getElementById('auto-sync-every-input').value = state.syncConfig.autoSyncEvery ?? 5;
 
-      const prov = state.syncConfig.provider;
-      document.querySelectorAll('.sync-provider-btn').forEach(btn => {
-        const active = btn.dataset.provider === prov;
-        btn.className = `sync-provider-btn px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all ${
-          active ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-        }`;
-      });
-      document.querySelectorAll('.sync-cfg-panel').forEach(p => {
-        p.classList.toggle('hidden', p.id !== `cfg-${prov}`);
-      });
-
       document.getElementById('gt-token').value = state.syncConfig.giteeToken || '';
       document.getElementById('gt-owner').value = state.syncConfig.giteeOwner || '';
       document.getElementById('gt-repo').value = state.syncConfig.giteeRepo || '';
       document.getElementById('gt-branch').value = state.syncConfig.giteeBranch || 'master';
       document.getElementById('gt-path').value = state.syncConfig.giteePath || 'lexisync_data.json';
 
-      document.getElementById('sb-url').value = state.syncConfig.supabaseUrl || '';
-      document.getElementById('sb-key').value = state.syncConfig.supabaseKey || '';
-      document.getElementById('sb-sync-id').value = state.syncConfig.supabaseSyncId || '';
-
-      document.getElementById('od-client-id').value = state.syncConfig.onedriveClientId || '';
-      document.getElementById('od-redirect-uri').value = getOneDriveRedirectUri();
-      document.getElementById('od-token').value = state.syncConfig.onedriveToken || '';
-      document.getElementById('od-path').value = state.syncConfig.onedrivePath || '/me/drive/root:/LexiSync/lexisync_data.json:/content';
-
-      const odDot = document.getElementById('od-auth-dot');
-      const odText = document.getElementById('od-auth-text');
-      const odLogout = document.getElementById('od-logout-btn');
-      if (state.syncConfig.onedriveRefreshToken) {
-        odDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0';
-        odText.textContent = `已授权 OneDrive：${state.syncConfig.onedriveAccount || '个人微软账号'}（支持自动续期）`;
-        odLogout.classList.remove('hidden');
-      } else if (state.syncConfig.onedriveToken) {
-        odDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0';
-        odText.textContent = '已填入临时 Token（约 1 小时后过期）';
-        odLogout.classList.remove('hidden');
-      } else {
-        odDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0';
-        odText.textContent = '尚未登录 OneDrive';
-        odLogout.classList.add('hidden');
-      }
-
-      document.getElementById('wd-url').value = state.syncConfig.webdavUrl || '';
-      document.getElementById('wd-user').value = state.syncConfig.webdavUser || '';
-      document.getElementById('wd-pass').value = state.syncConfig.webdavPass || '';
-
       document.getElementById('ai-enable-toggle').checked = !!state.aiConfig.enabled;
       document.getElementById('ai-batch-size-input').value = state.aiConfig.batchSize || 20;
       document.getElementById('ai-base-url').value = state.aiConfig.baseUrl || 'https://api.deepseek.com/v1';
       document.getElementById('ai-api-key').value = state.aiConfig.apiKey || '';
       document.getElementById('ai-model').value = state.aiConfig.model || 'deepseek-chat';
-    }
-
-    const OD_PKCE_KEY = 'lexisync_od_pkce_v1';
-    const OD_SCOPE = 'offline_access Files.ReadWrite User.Read';
-
-    function getOneDriveRedirectUri() {
-      try {
-        if (window.location.protocol === 'https:' && window.location.host) {
-          return window.location.origin + window.location.pathname;
-        }
-      } catch (e) {}
-      return 'https://cm0723.github.io/wordremember/';
-    }
-
-    function base64UrlEncode(buffer) {
-      const bytes = new Uint8Array(buffer);
-      let bin = '';
-      for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
-      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
-    function generatePkceVerifier() {
-      const arr = new Uint8Array(32);
-      window.crypto.getRandomValues(arr);
-      return base64UrlEncode(arr);
-    }
-
-    async function generatePkceChallenge(verifier) {
-      const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-      return base64UrlEncode(digest);
-    }
-
-    async function startOneDriveLogin() {
-      const clientId = (document.getElementById('od-client-id').value || '').trim();
-      if (!clientId) { showToast('请先填写 Azure 应用程序 (客户端) ID', 'warn'); return; }
-      state.syncConfig.provider = 'onedrive';
-      state.syncConfig.onedriveClientId = clientId;
-      saveState();
-      if (!window.crypto || !window.crypto.subtle) { showToast('请在 HTTPS 网页中使用', 'error'); return; }
-      const redirectUri = getOneDriveRedirectUri();
-      const verifier = generatePkceVerifier();
-      const challenge = await generatePkceChallenge(verifier);
-      const oauthState = generatePkceVerifier().slice(0, 16);
-      try { localStorage.setItem(OD_PKCE_KEY, JSON.stringify({ verifier, redirectUri, oauthState, clientId })); } catch (e) {}
-      const params = new URLSearchParams({
-        client_id: clientId, response_type: 'code', redirect_uri: redirectUri, response_mode: 'query',
-        scope: OD_SCOPE, code_challenge: challenge, code_challenge_method: 'S256', state: oauthState, prompt: 'select_account'
-      });
-      window.location.href = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
-    }
-
-    async function handleOneDriveOAuthCallback() {
-      let params;
-      try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
-      const code = params.get('code');
-      const err = params.get('error');
-      if (!code && !err) return;
-      try { window.history.replaceState({}, document.title, window.location.pathname + window.location.hash); } catch (e) {}
-      if (err) { showToast(`微软登录未完成：${params.get('error_description') || err}`, 'error'); return; }
-      let pkceData = null;
-      try { pkceData = JSON.parse(localStorage.getItem(OD_PKCE_KEY) || 'null'); localStorage.removeItem(OD_PKCE_KEY); } catch (e) {}
-      if (!pkceData || !pkceData.verifier) return;
-      try {
-        const body = new URLSearchParams({
-          client_id: pkceData.clientId || state.syncConfig.onedriveClientId,
-          grant_type: 'authorization_code', code, redirect_uri: pkceData.redirectUri,
-          code_verifier: pkceData.verifier, scope: OD_SCOPE
-        });
-        const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString()
-        });
-        const data = await res.json();
-        if (!res.ok || !data.access_token) throw new Error(data.error_description || 'Token 换取失败');
-        state.syncConfig.provider = 'onedrive';
-        state.syncConfig.onedriveClientId = pkceData.clientId || state.syncConfig.onedriveClientId;
-        state.syncConfig.onedriveToken = data.access_token;
-        state.syncConfig.onedriveRefreshToken = data.refresh_token || '';
-        state.syncConfig.onedriveTokenExpiresAt = Date.now() + ((Number(data.expires_in) || 3600) * 1000);
-        saveState();
-        renderAll();
-        await performCloudSync({ silent: false });
-      } catch (e) { showToast(`OneDrive 授权失败：${e.message}`, 'error'); }
-    }
-
-    async function ensureValidOneDriveToken() {
-      const cfg = state.syncConfig;
-      const now = Date.now();
-      if (cfg.onedriveToken && (!cfg.onedriveTokenExpiresAt || now < cfg.onedriveTokenExpiresAt - 120000)) return cfg.onedriveToken;
-      if (cfg.onedriveRefreshToken && cfg.onedriveClientId) {
-        const body = new URLSearchParams({
-          client_id: cfg.onedriveClientId, grant_type: 'refresh_token', refresh_token: cfg.onedriveRefreshToken, scope: OD_SCOPE
-        });
-        const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString()
-        });
-        const data = await res.json();
-        if (!res.ok || !data.access_token) throw new Error('OneDrive 授权已过期，请重新登录');
-        cfg.onedriveToken = data.access_token;
-        if (data.refresh_token) cfg.onedriveRefreshToken = data.refresh_token;
-        cfg.onedriveTokenExpiresAt = Date.now() + ((Number(data.expires_in) || 3600) * 1000);
-        saveState();
-        return cfg.onedriveToken;
-      }
-      throw new Error('请先登录微软账号授权 OneDrive');
     }
 
     function mergeRemotePayload(remote) {
@@ -2583,81 +2351,42 @@ ${JSON.stringify(compactList)}
       };
 
       try {
-        if (cfg.provider === 'gitee') {
-          const owner = encodeURIComponent(cfg.giteeOwner.trim());
-          const repo = encodeURIComponent(cfg.giteeRepo.trim());
-          const branch = (cfg.giteeBranch || 'master').trim();
-          const filePath = (cfg.giteePath || 'lexisync_data.json').replace(/^\/+/, '').trim();
-          const baseUrl = `https://gitee.com/api/v5/repos/${owner}/${repo}/contents/${filePath}`;
+        const owner = encodeURIComponent(cfg.giteeOwner.trim());
+        const repo = encodeURIComponent(cfg.giteeRepo.trim());
+        const branch = (cfg.giteeBranch || 'master').trim();
+        const filePath = (cfg.giteePath || 'lexisync_data.json').replace(/^\/+/, '').trim();
+        const baseUrl = `https://gitee.com/api/v5/repos/${owner}/${repo}/contents/${filePath}`;
 
-          let existingSha = null;
-          const getRes = await fetch(`${baseUrl}?access_token=${encodeURIComponent(cfg.giteeToken)}&ref=${encodeURIComponent(branch)}`);
-          if (getRes.ok) {
-            const fileData = await getRes.json();
-            if (fileData && !Array.isArray(fileData) && fileData.content) {
-              existingSha = fileData.sha || null;
-              try { mergeRemotePayload(JSON.parse(base64ToUtf8(fileData.content))); } catch (e) {}
-            }
-          } else if (getRes.status !== 404) {
-            throw new Error('Gitee 读取失败: HTTP ' + getRes.status);
+        let existingSha = null;
+        const getRes = await fetch(`${baseUrl}?access_token=${encodeURIComponent(cfg.giteeToken)}&ref=${encodeURIComponent(branch)}`);
+        if (getRes.ok) {
+          const fileData = await getRes.json();
+          if (fileData && !Array.isArray(fileData) && fileData.content) {
+            existingSha = fileData.sha || null;
+            try { mergeRemotePayload(JSON.parse(base64ToUtf8(fileData.content))); } catch (e) {}
           }
+        } else if (getRes.status !== 404) {
+          throw new Error('Gitee 读取失败: HTTP ' + getRes.status);
+        }
 
-          const payloadStr = JSON.stringify(buildSyncPayload());
-          const bodyObj = {
-            access_token: cfg.giteeToken,
-            content: utf8ToBase64(payloadStr),
-            message: `LexiSync sync (${state.deviceName})`,
-            branch
-          };
-          if (existingSha) bodyObj.sha = existingSha;
+        const payloadStr = JSON.stringify(buildSyncPayload());
+        const bodyObj = {
+          access_token: cfg.giteeToken,
+          content: utf8ToBase64(payloadStr),
+          message: `LexiSync sync (${state.deviceName})`,
+          branch
+        };
+        if (existingSha) bodyObj.sha = existingSha;
 
-          const writeRes = await fetch(baseUrl, {
-            method: existingSha ? 'PUT' : 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bodyObj)
-          });
-          if (!writeRes.ok) {
-            let errMsg = 'HTTP ' + writeRes.status;
-            try { const ej = await writeRes.json(); if (ej?.message) errMsg += ' - ' + ej.message; } catch (e) {}
-            throw new Error('Gitee 写入失败: ' + errMsg);
-          }
-        } else if (cfg.provider === 'supabase') {
-          const base = cfg.supabaseUrl.replace(/\/+$/, '');
-          const headers = { 'apikey': cfg.supabaseKey, 'Authorization': `Bearer ${cfg.supabaseKey}`, 'Content-Type': 'application/json' };
-          const getRes = await fetch(`${base}/rest/v1/vocab_sync?sync_id=eq.${encodeURIComponent(cfg.supabaseSyncId)}&select=payload`, { headers });
-          if (!getRes.ok) throw new Error('Supabase 读取失败: HTTP ' + getRes.status);
-          const rows = await getRes.json();
-          if (rows.length > 0 && rows[0].payload) mergeRemotePayload(rows[0].payload);
-
-          const upsertRes = await fetch(`${base}/rest/v1/vocab_sync`, {
-            method: 'POST',
-            headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-            body: JSON.stringify({ sync_id: cfg.supabaseSyncId, payload: buildSyncPayload(), updated_at: new Date().toISOString() })
-          });
-          if (!upsertRes.ok) throw new Error('Supabase 写入失败: HTTP ' + upsertRes.status);
-        } else if (cfg.provider === 'onedrive') {
-          const accessToken = await ensureValidOneDriveToken();
-          const path = cfg.onedrivePath.startsWith('/') ? cfg.onedrivePath : '/' + cfg.onedrivePath;
-          const url = `https://graph.microsoft.com/v1.0${path}`;
-          const headers = { 'Authorization': `Bearer ${accessToken}` };
-          const getRes = await fetch(url, { headers });
-          if (getRes.ok) mergeRemotePayload(await getRes.json());
-          const putRes = await fetch(url, {
-            method: 'PUT',
-            headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify(buildSyncPayload())
-          });
-          if (!putRes.ok) throw new Error('OneDrive 写入失败: HTTP ' + putRes.status);
-        } else if (cfg.provider === 'webdav') {
-          const auth = 'Basic ' + btoa(`${cfg.webdavUser}:${cfg.webdavPass}`);
-          const getRes = await fetch(cfg.webdavUrl, { headers: { 'Authorization': auth } });
-          if (getRes.ok) mergeRemotePayload(await getRes.json());
-          const putRes = await fetch(cfg.webdavUrl, {
-            method: 'PUT',
-            headers: { 'Authorization': auth, 'Content-Type': 'application/json' },
-            body: JSON.stringify(buildSyncPayload())
-          });
-          if (!putRes.ok) throw new Error('WebDAV 写入失败: HTTP ' + putRes.status);
+        const writeRes = await fetch(baseUrl, {
+          method: existingSha ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyObj)
+        });
+        if (!writeRes.ok) {
+          let errMsg = 'HTTP ' + writeRes.status;
+          try { const ej = await writeRes.json(); if (ej?.message) errMsg += ' - ' + ej.message; } catch (e) {}
+          throw new Error('Gitee 写入失败: ' + errMsg);
         }
 
         state.lastSyncAt = Date.now();
@@ -3292,69 +3021,17 @@ ${JSON.stringify(compactList)}
         showToast(v > 0 ? `已设为每背 ${v} 词自动同步` : '已关闭按词数自动同步', 'info');
       });
 
-      document.querySelectorAll('.sync-provider-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          state.syncConfig.provider = btn.dataset.provider;
-          saveState();
-          renderSyncView();
-        });
-      });
-
       document.getElementById('save-sync-cfg-btn').addEventListener('click', () => {
+        state.syncConfig.provider = 'gitee';
         state.syncConfig.giteeToken = document.getElementById('gt-token').value.trim();
         state.syncConfig.giteeOwner = document.getElementById('gt-owner').value.trim();
         state.syncConfig.giteeRepo = document.getElementById('gt-repo').value.trim();
         state.syncConfig.giteeBranch = document.getElementById('gt-branch').value.trim() || 'master';
         state.syncConfig.giteePath = document.getElementById('gt-path').value.trim() || 'lexisync_data.json';
-        state.syncConfig.supabaseUrl = document.getElementById('sb-url').value.trim();
-        state.syncConfig.supabaseKey = document.getElementById('sb-key').value.trim();
-        state.syncConfig.supabaseSyncId = document.getElementById('sb-sync-id').value.trim();
-        state.syncConfig.onedriveClientId = document.getElementById('od-client-id').value.trim();
-        const manualTok = document.getElementById('od-token').value.trim();
-        if (manualTok !== state.syncConfig.onedriveToken) {
-          state.syncConfig.onedriveToken = manualTok;
-          if (manualTok && !state.syncConfig.onedriveRefreshToken) state.syncConfig.onedriveTokenExpiresAt = 0;
-        }
-        state.syncConfig.onedrivePath = document.getElementById('od-path').value.trim();
-        state.syncConfig.webdavUrl = document.getElementById('wd-url').value.trim();
-        state.syncConfig.webdavUser = document.getElementById('wd-user').value.trim();
-        state.syncConfig.webdavPass = document.getElementById('wd-pass').value.trim();
         saveState();
         renderNavigation();
         renderSyncView();
-        showToast('云同步配置已保存', 'success');
-      });
-
-      document.getElementById('od-login-btn').addEventListener('click', startOneDriveLogin);
-      document.getElementById('od-logout-btn').addEventListener('click', () => {
-        state.syncConfig.onedriveToken = '';
-        state.syncConfig.onedriveRefreshToken = '';
-        state.syncConfig.onedriveTokenExpiresAt = 0;
-        state.syncConfig.onedriveAccount = '';
-        saveState();
-        renderAll();
-        showToast('已退出 OneDrive 授权', 'info');
-      });
-
-      function copyTextWithFallback(text, msg) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(() => showToast(msg, 'success')).catch(() => fallbackCopy(text, msg));
-        } else {
-          fallbackCopy(text, msg);
-        }
-      }
-      function fallbackCopy(text, msg) {
-        const ta = document.createElement('textarea');
-        ta.value = text; document.body.appendChild(ta); ta.select();
-        try { document.execCommand('copy'); showToast(msg, 'success'); } catch (e) {}
-        document.body.removeChild(ta);
-      }
-
-      document.getElementById('copy-od-redirect-btn').addEventListener('click', () => {
-        copyTextWithFallback(document.getElementById('od-redirect-uri').value, '已复制重定向 URI');
-      });
-      document.getElementById('copy-sql-btn').addEventListener('click', () => {
-        copyTextWithFallback(document.getElementById('supabase-sql-code').textContent, '已复制建表 SQL');
+        showToast('Gitee 同步配置已保存', 'success');
       });
 
       document.getElementById('sync-now-btn').addEventListener('click', () => performCloudSync({ silent: false }));
@@ -3421,7 +3098,6 @@ ${JSON.stringify(compactList)}
     window.addEventListener('DOMContentLoaded', () => {
       initEvents();
       renderAll();
-      handleOneDriveOAuthCallback();
       if (state.syncConfig.autoSyncOnOpen && hasCloudSyncConfigured()) {
         setTimeout(() => performCloudSync({ silent: true }), 400);
       }
