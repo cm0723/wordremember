@@ -67,18 +67,24 @@
 
       <!-- Desktop Tabs -->
       <nav class="hidden md:flex items-center bg-slate-100/90 p-1 rounded-xl gap-0.5" aria-label="主导航">
-        <button data-tab="study" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5">
+        <button data-tab="study" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap">
           <i data-lucide="book-open" class="w-4 h-4"></i>背单词
         </button>
-        <button data-tab="mistakes" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5">
-          <i data-lucide="alert-triangle" class="w-4 h-4"></i>错题与易混
+        <button data-tab="learn" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="eye" class="w-4 h-4"></i>学习预览
+        </button>
+        <button data-tab="stats" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="calendar-days" class="w-4 h-4"></i>日历统计
+        </button>
+        <button data-tab="mistakes" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>错题易混
           <span id="nav-mistake-badge" class="hidden text-[11px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-semibold">0</span>
         </button>
-        <button data-tab="wordbook" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5">
-          <i data-lucide="library" class="w-4 h-4"></i>词表管理
+        <button data-tab="wordbook" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="library" class="w-4 h-4"></i>词表
         </button>
-        <button data-tab="sync" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5">
-          <i data-lucide="cloud" class="w-4 h-4"></i>同步与AI设置
+        <button data-tab="sync" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <i data-lucide="cloud" class="w-4 h-4"></i>设置
         </button>
       </nav>
 
@@ -378,6 +384,153 @@
       </div>
     </section>
 
+    <!-- ==================== VIEW: LEARN (快速学习预览模式) ==================== -->
+    <section id="view-learn" class="view-section hidden space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">学习预览模式（免打字速览）</h2>
+          <p class="text-xs text-slate-500 mt-0.5">快速浏览今日待学单词或随机抽取词库，支持一键隐藏释义自测、展开词源例句与发音朗读</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="learn-shuffle-btn" type="button" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="shuffle" class="w-4 h-4"></i>换一批随机词
+          </button>
+          <button id="learn-toggle-mask-btn" type="button" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+            <i data-lucide="eye-off" class="w-4 h-4"></i><span id="learn-mask-label">隐藏释义自测</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Source Filter & Display Options -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" data-learn-src="today" class="learn-src-btn px-3 py-1.5 rounded-full text-xs font-semibold transition-all">今日学习单词</button>
+          <button type="button" data-learn-src="random" class="learn-src-btn px-3 py-1.5 rounded-full text-xs font-semibold transition-all">随机快速预览</button>
+          <button type="button" data-learn-src="multi" class="learn-src-btn px-3 py-1.5 rounded-full text-xs font-semibold transition-all">多义重点词</button>
+          <button type="button" data-learn-src="mistakes" class="learn-src-btn px-3 py-1.5 rounded-full text-xs font-semibold transition-all">错题 / 易混速览</button>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+          <div id="learn-count-wrap" class="flex items-center gap-1.5">
+            <span>每次显示：</span>
+            <select id="learn-batch-count" class="px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700 outline-none">
+              <option value="20" selected>20 词</option>
+              <option value="40">40 词</option>
+              <option value="60">60 词</option>
+            </select>
+          </div>
+          <label class="inline-flex items-center gap-1.5 cursor-pointer select-none font-medium">
+            <input id="learn-show-details-toggle" type="checkbox" checked class="rounded text-indigo-600 focus:ring-indigo-500" />
+            展开词源与例句
+          </label>
+          <span id="learn-summary-badge" class="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">共 0 词</span>
+        </div>
+      </div>
+
+      <!-- Preview Cards Grid -->
+      <div id="learn-cards-grid" class="grid sm:grid-cols-2 gap-3.5"></div>
+    </section>
+
+    <!-- ==================== VIEW: STATS (日历学习统计模式) ==================== -->
+    <section id="view-stats" class="view-section hidden space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">学习日历与统计</h2>
+          <p class="text-xs text-slate-500 mt-0.5">按北京时间每日 05:00 换日统计，直观查看每天的学习量、达标状态与具体背诵词单</p>
+        </div>
+        <button id="stats-go-today-btn" type="button" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+          <i data-lucide="calendar-check" class="w-4 h-4 text-indigo-600"></i>回到本月今日
+        </button>
+      </div>
+
+      <!-- 4 KPI Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex items-center justify-between">
+            <span>累计打卡 / 连续</span>
+            <i data-lucide="flame" class="w-4 h-4 text-amber-500"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-1.5">
+            <span id="st-total-days" class="text-2xl font-extrabold text-slate-900">0</span>
+            <span class="text-xs text-slate-500">天 · 连卡 <strong id="st-streak-days" class="text-amber-600">0</strong> 天</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex items-center justify-between">
+            <span>熟知词库 / 已学进度</span>
+            <i data-lucide="award" class="w-4 h-4 text-emerald-600"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-1.5">
+            <span id="st-known-count" class="text-2xl font-extrabold text-emerald-700">0</span>
+            <span class="text-xs text-slate-500">熟知 · 已学 <strong id="st-studied-total" class="text-slate-700">0</strong>/<span id="st-all-words-total">1674</span></span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex items-center justify-between">
+            <span>本月学习词次</span>
+            <i data-lucide="bar-chart-3" class="w-4 h-4 text-indigo-600"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-1.5">
+            <span id="st-month-practiced" class="text-2xl font-extrabold text-indigo-700">0</span>
+            <span class="text-xs text-slate-500">词 · 达标 <strong id="st-month-goal-days" class="text-emerald-600">0</strong> 天</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold text-slate-500 flex items-center justify-between">
+            <span>综合正确率</span>
+            <i data-lucide="target" class="w-4 h-4 text-purple-600"></i>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-1.5">
+            <span id="st-overall-acc" class="text-2xl font-extrabold text-slate-900">--%</span>
+            <span id="st-overall-sub" class="text-xs text-slate-500">近30日作答</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Calendar Card -->
+      <div class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <button id="cal-prev-month-btn" type="button" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600" title="上个月">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <h3 id="cal-month-title" class="text-base sm:text-lg font-extrabold text-slate-900 min-w-[120px] text-center">2026年 11月</h3>
+            <button id="cal-next-month-btn" type="button" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600" title="下个月">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
+            <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span>已达标</span>
+            <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-indigo-400 inline-block"></span>学习中</span>
+            <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-300 inline-block"></span>少量练习</span>
+            <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-100 border border-slate-200 inline-block"></span>未学习</span>
+          </div>
+        </div>
+
+        <!-- Weekday Headers -->
+        <div class="grid grid-cols-7 gap-1.5 sm:gap-2 text-center text-xs font-bold text-slate-400 pb-1">
+          <div>周一</div><div>周二</div><div>周三</div><div>周四</div><div>周五</div><div>周六</div><div>周日</div>
+        </div>
+
+        <!-- Calendar Days Grid -->
+        <div id="cal-days-grid" class="grid grid-cols-7 gap-1.5 sm:gap-2"></div>
+      </div>
+
+      <!-- Selected Day Detail Panel -->
+      <div id="cal-day-detail" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h4 id="cal-detail-date" class="text-base font-bold text-slate-900">当日详情</h4>
+            <span id="cal-detail-status-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">未学习</span>
+          </div>
+          <div id="cal-detail-metrics" class="flex flex-wrap items-center gap-3 text-xs text-slate-600"></div>
+        </div>
+        <div id="cal-detail-words" class="flex flex-wrap gap-1.5 pt-1"></div>
+      </div>
+    </section>
+
     <!-- ==================== VIEW 2: MISTAKES & CONFUSED ==================== -->
     <section id="view-mistakes" class="view-section hidden space-y-5">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -638,18 +791,24 @@
   </main>
 
   <!-- Mobile Bottom Navigation -->
-  <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 glass-nav border-t border-slate-200 px-2 py-1.5 grid grid-cols-4 gap-1" aria-label="移动端导航">
-    <button data-tab="study" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium">
-      <i data-lucide="book-open" class="w-5 h-5 mb-0.5"></i>背单词
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 glass-nav border-t border-slate-200 px-1 py-1.5 grid grid-cols-6 gap-0.5" aria-label="移动端导航">
+    <button data-tab="study" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[10px] font-medium">
+      <i data-lucide="book-open" class="w-4 h-4 mb-0.5"></i>背词
     </button>
-    <button data-tab="mistakes" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium relative">
-      <i data-lucide="alert-triangle" class="w-5 h-5 mb-0.5"></i>错题易混
+    <button data-tab="learn" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[10px] font-medium">
+      <i data-lucide="eye" class="w-4 h-4 mb-0.5"></i>速览
     </button>
-    <button data-tab="wordbook" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium">
-      <i data-lucide="library" class="w-5 h-5 mb-0.5"></i>词表
+    <button data-tab="stats" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[10px] font-medium">
+      <i data-lucide="calendar-days" class="w-4 h-4 mb-0.5"></i>统计
     </button>
-    <button data-tab="sync" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium">
-      <i data-lucide="cloud" class="w-5 h-5 mb-0.5"></i>同步设置
+    <button data-tab="mistakes" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[10px] font-medium relative">
+      <i data-lucide="alert-triangle" class="w-4 h-4 mb-0.5"></i>错题
+    </button>
+    <button data-tab="wordbook" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[10px] font-medium">
+      <i data-lucide="library" class="w-4 h-4 mb-0.5"></i>词表
+    </button>
+    <button data-tab="sync" class="mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[10px] font-medium">
+      <i data-lucide="cloud" class="w-4 h-4 mb-0.5"></i>设置
     </button>
   </nav>
 
@@ -1073,6 +1232,7 @@
         pendingAiBatch: [],
         lastBatchReport: null,
         wrongAnswerLogs: [],
+        dailyStats: {},
         dailyPlan: {
           selectedBooks: ['common', 'cet4', 'cet6'],
           dailyNewTarget: 30,
@@ -1218,6 +1378,7 @@
           };
           applyProgressToWords(merged.words, parsed.progressMap, parsed.customWords);
           const curDay = getBeijingStudyDay();
+          merged.dailyStats = merged.dailyStats || {};
           if (merged.todayStudyDay !== curDay) {
             merged.todayStudyDay = curDay;
             merged.todayCount = 0;
@@ -1276,6 +1437,7 @@
           pendingAiBatch: (state.pendingAiBatch || []).slice(-50),
           lastBatchReport: state.lastBatchReport || null,
           wrongAnswerLogs: (state.wrongAnswerLogs || []).slice(-2000),
+          dailyStats: state.dailyStats || {},
           dailyPlan: state.dailyPlan,
           syncConfig: state.syncConfig,
           aiConfig: state.aiConfig,
@@ -1861,6 +2023,8 @@ ${JSON.stringify(compactList)}
       checkStudyDayRollover();
       renderNavigation();
       renderStudyView();
+      renderLearnView();
+      renderStatsView();
       renderMistakesView();
       renderWordbookView();
       renderSyncView();
@@ -1879,14 +2043,14 @@ ${JSON.stringify(compactList)}
 
       document.querySelectorAll('.nav-tab-btn').forEach(btn => {
         const active = btn.dataset.tab === state.activeTab;
-        btn.className = `nav-tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+        btn.className = `nav-tab-btn px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
           active ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
         }`;
       });
 
       document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
         const active = btn.dataset.tab === state.activeTab;
-        btn.className = `mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[11px] font-medium ${
+        btn.className = `mobile-tab-btn flex flex-col items-center py-1 rounded-xl text-[10px] font-medium ${
           active ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-500'
         }`;
       });
@@ -2167,6 +2331,290 @@ ${JSON.stringify(compactList)}
       document.getElementById('answer-input').focus();
     }
 
+    // =========================================================================
+    // LEARN PREVIEW MODE & CALENDAR STATS MODE
+    // =========================================================================
+    const learnUi = {
+      source: 'today',
+      count: 20,
+      maskMeaning: false,
+      showDetails: true,
+      randomIds: [],
+      revealedIds: new Set()
+    };
+
+    const statsUi = {
+      year: parseInt(getBeijingStudyDay().slice(0, 4), 10),
+      month: parseInt(getBeijingStudyDay().slice(5, 7), 10), // 1..12
+      selectedDay: getBeijingStudyDay()
+    };
+
+    function pickRandomLearnIds() {
+      const pool = getSelectedPool().filter(w => w.status !== 'known');
+      const arr = pool.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      learnUi.randomIds = arr.slice(0, learnUi.count).map(w => w.id);
+      learnUi.revealedIds.clear();
+    }
+
+    function getLearnPreviewWords() {
+      const pool = getSelectedPool();
+      if (learnUi.source === 'today') {
+        const stats = getDailyPlanStats();
+        const todayStudied = pool.filter(w => w.lastStudiedDay === stats.today);
+        const list = [];
+        const seen = new Set();
+        [...stats.urgentReviewPending, ...stats.unstudiedNew, ...todayStudied].forEach(w => {
+          if (!seen.has(w.id)) { seen.add(w.id); list.push(w); }
+        });
+        return list;
+      }
+      if (learnUi.source === 'multi') {
+        return pool.filter(w => w.isMultiMeaning && w.status !== 'known').slice(0, learnUi.count);
+      }
+      if (learnUi.source === 'mistakes') {
+        return state.words.filter(w => ['confused', 'dont_know', 'wrong', 'partial'].includes(w.status)).slice(0, learnUi.count);
+      }
+      // random
+      if (!learnUi.randomIds.length) pickRandomLearnIds();
+      const byId = new Map(state.words.map(w => [w.id, w]));
+      return learnUi.randomIds.map(id => byId.get(id)).filter(Boolean);
+    }
+
+    function renderLearnView() {
+      document.querySelectorAll('.learn-src-btn').forEach(btn => {
+        const active = btn.dataset.learnSrc === learnUi.source;
+        btn.className = `learn-src-btn px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+          active ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        }`;
+      });
+      document.getElementById('learn-count-wrap').classList.toggle('hidden', learnUi.source === 'today');
+      document.getElementById('learn-shuffle-btn').classList.toggle('hidden', learnUi.source !== 'random');
+      document.getElementById('learn-mask-label').textContent = learnUi.maskMeaning ? '显示全部释义' : '隐藏释义自测';
+      document.getElementById('learn-show-details-toggle').checked = learnUi.showDetails;
+
+      const list = getLearnPreviewWords();
+      document.getElementById('learn-summary-badge').textContent = `共 ${list.length} 词`;
+      const grid = document.getElementById('learn-cards-grid');
+
+      if (list.length === 0) {
+        grid.innerHTML = `<div class="sm:col-span-2 bg-white rounded-2xl border border-slate-200 p-8 text-center text-sm text-slate-500">当前分组暂无可预览单词，可切换「随机快速预览」立即浏览勾选词库。</div>`;
+        return;
+      }
+
+      grid.innerHTML = list.map(w => {
+        const bm = BOOK_META[w.book] || BOOK_META.custom;
+        const sm = getStatusMeta(w.status);
+        const masked = learnUi.maskMeaning && !learnUi.revealedIds.has(w.id);
+        return `
+          <div data-learn-card-id="${escapeHtml(w.id)}" class="learn-preview-card bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm hover:border-indigo-300 transition-all space-y-2.5 ${learnUi.maskMeaning ? 'cursor-pointer' : ''}">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xl font-extrabold text-slate-900 tracking-tight">${escapeHtml(w.word)}</span>
+                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded ${bm.badgeCls}">${bm.name}</span>
+                ${w.isMultiMeaning ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">多义</span>' : ''}
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${sm.cls}">${sm.label}</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" data-speak-word="${escapeHtml(w.word)}" class="learn-speak-btn p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600" title="朗读">
+                  <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                </button>
+                <button type="button" data-learn-test-id="${escapeHtml(w.id)}" class="learn-test-btn px-2 py-1 rounded-lg bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-600 text-[11px] font-semibold transition-colors">测验</button>
+              </div>
+            </div>
+
+            <div class="${masked ? 'select-none blur-sm opacity-40 hover:opacity-60 transition-all' : ''}">
+              <p class="text-sm font-bold text-indigo-900">${escapeHtml(w.meaning)}</p>
+              ${learnUi.showDetails ? `
+                <div class="mt-2 pt-2 border-t border-slate-100 space-y-1 text-xs">
+                  ${w.etymology ? `<p class="text-indigo-700/90">${escapeHtml(w.etymology)}</p>` : ''}
+                  ${w.exampleEn ? `<p class="text-slate-700 font-medium">${escapeHtml(w.exampleEn)}</p>` : ''}
+                  ${w.exampleZh ? `<p class="text-slate-400">${escapeHtml(w.exampleZh)}</p>` : ''}
+                </div>
+              ` : ''}
+            </div>
+            ${masked ? '<div class="text-[11px] text-indigo-500 font-medium">点击卡片翻看释义与例句</div>' : ''}
+          </div>`;
+      }).join('');
+    }
+
+    function getAggregatedDailyMap() {
+      // Combine explicit state.dailyStats + fallback backfill from words[].studiedDays so every past day shows up!
+      const map = {};
+      const defaultTarget = Number(state.dailyPlan.dailyNewTarget) || 30;
+      const byDayWords = {};
+
+      state.words.forEach(w => {
+        (w.studiedDays || []).forEach(day => {
+          if (!byDayWords[day]) byDayWords[day] = [];
+          byDayWords[day].push(w);
+        });
+      });
+
+      Object.keys(byDayWords).forEach(day => {
+        const ws = byDayWords[day];
+        const newCnt = ws.filter(w => w.firstStudiedDay === day).length;
+        const okCnt = ws.filter(w => (w.lastScore ?? 0) >= 80).length;
+        map[day] = {
+          practiced: ws.length,
+          newCount: newCnt,
+          reviewCount: Math.max(0, ws.length - newCnt),
+          correctCount: okCnt,
+          wrongCount: ws.length - okCnt,
+          target: defaultTarget,
+          words: ws
+        };
+      });
+
+      Object.entries(state.dailyStats || {}).forEach(([day, ds]) => {
+        if (!ds) return;
+        const ws = byDayWords[day] || [];
+        const base = map[day] || { practiced: 0, newCount: 0, reviewCount: 0, correctCount: 0, wrongCount: 0, target: defaultTarget, words: ws };
+        map[day] = {
+          practiced: Math.max(base.practiced, ds.practiced || 0),
+          newCount: Math.max(base.newCount, ds.newCount || 0),
+          reviewCount: Math.max(base.reviewCount, ds.reviewCount || 0),
+          correctCount: Math.max(base.correctCount, ds.correctCount || 0),
+          wrongCount: Math.max(base.wrongCount, ds.wrongCount || 0),
+          target: ds.target || defaultTarget,
+          words: ws
+        };
+      });
+
+      return map;
+    }
+
+    function renderStatsView() {
+      const today = getBeijingStudyDay();
+      const dayMap = getAggregatedDailyMap();
+      const activeDays = Object.keys(dayMap).filter(d => (dayMap[d].practiced || 0) > 0).sort();
+
+      // Calculate current streak ending at today or yesterday
+      let streak = 0;
+      let cursor = dayMap[today] && dayMap[today].practiced > 0 ? today : getPreviousStudyDay(today);
+      while (dayMap[cursor] && dayMap[cursor].practiced > 0) {
+        streak++;
+        cursor = getPreviousStudyDay(cursor);
+      }
+
+      const knownCnt = state.words.filter(w => w.status === 'known').length;
+      const studiedTotal = state.words.filter(w => w.status !== 'new').length;
+      document.getElementById('st-total-days').textContent = activeDays.length;
+      document.getElementById('st-streak-days').textContent = streak;
+      document.getElementById('st-known-count').textContent = knownCnt;
+      document.getElementById('st-studied-total').textContent = studiedTotal;
+      document.getElementById('st-all-words-total').textContent = state.words.length;
+
+      // Overall accuracy across recorded days
+      let sumOk = 0, sumAll = 0;
+      activeDays.slice(-30).forEach(d => {
+        const x = dayMap[d];
+        sumOk += (x.correctCount || 0);
+        sumAll += ((x.correctCount || 0) + (x.wrongCount || 0));
+      });
+      document.getElementById('st-overall-acc').textContent = sumAll > 0 ? `${Math.round((sumOk / sumAll) * 100)}%` : '--%';
+      document.getElementById('st-overall-sub').textContent = sumAll > 0 ? `近30日共 ${sumAll} 次作答` : '暂无作答记录';
+
+      // Render Month Calendar
+      const y = statsUi.year, m = statsUi.month;
+      const monthPrefix = `${y}-${String(m).padStart(2, '0')}`;
+      document.getElementById('cal-month-title').textContent = `${y}年 ${m}月`;
+
+      let monthPracticed = 0, monthGoalDays = 0;
+      Object.entries(dayMap).forEach(([d, info]) => {
+        if (d.startsWith(monthPrefix) && info.practiced > 0) {
+          monthPracticed += info.practiced;
+          if (info.practiced >= (info.target || 30)) monthGoalDays++;
+        }
+      });
+      document.getElementById('st-month-practiced').textContent = monthPracticed;
+      document.getElementById('st-month-goal-days').textContent = monthGoalDays;
+
+      const firstDow = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(); // 0=Sun..6=Sat
+      const padLeft = (firstDow + 6) % 7; // Monday = 0
+      const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+      let cellsHtml = '';
+      for (let i = 0; i < padLeft; i++) {
+        cellsHtml += `<div class="h-16 sm:h-20 rounded-2xl bg-slate-50/40"></div>`;
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dayStr = `${monthPrefix}-${String(d).padStart(2, '0')}`;
+        const info = dayMap[dayStr];
+        const count = info ? info.practiced : 0;
+        const target = info ? (info.target || 30) : (Number(state.dailyPlan.dailyNewTarget) || 30);
+        const isToday = dayStr === today;
+        const isSelected = dayStr === statsUi.selectedDay;
+
+        let bgCls = 'bg-slate-50 border-slate-200/70 text-slate-500 hover:bg-slate-100';
+        let statusTag = '';
+        if (count >= target) {
+          bgCls = 'bg-emerald-50 border-emerald-300 text-emerald-900 hover:bg-emerald-100/80';
+          statusTag = '<span class="text-[10px] font-bold text-emerald-700">达标</span>';
+        } else if (count >= Math.ceil(target * 0.4)) {
+          bgCls = 'bg-indigo-50 border-indigo-200 text-indigo-900 hover:bg-indigo-100/80';
+          statusTag = '<span class="text-[10px] font-semibold text-indigo-600">学习中</span>';
+        } else if (count > 0) {
+          bgCls = 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100/80';
+          statusTag = '<span class="text-[10px] font-semibold text-amber-700">微练</span>';
+        }
+
+        const ringCls = isSelected ? 'ring-2 ring-indigo-600 ring-offset-1' : (isToday ? 'ring-2 ring-purple-400/70' : '');
+        cellsHtml += `
+          <button type="button" data-cal-day="${dayStr}" class="cal-day-cell h-16 sm:h-20 p-1.5 sm:p-2 rounded-2xl border text-left flex flex-col justify-between transition-all ${bgCls} ${ringCls}">
+            <div class="flex items-center justify-between w-full">
+              <span class="text-xs font-bold ${isToday ? 'text-purple-700' : ''}">${d}${isToday ? '<span class="hidden sm:inline text-[10px] ml-0.5">今</span>' : ''}</span>
+              ${statusTag}
+            </div>
+            <div class="text-[11px] sm:text-xs font-extrabold truncate">
+              ${count > 0 ? `${count} 词` : '<span class="text-slate-300 font-normal">-</span>'}
+            </div>
+          </button>`;
+      }
+      document.getElementById('cal-days-grid').innerHTML = cellsHtml;
+
+      // Render Selected Day Detail Panel
+      const selDay = statsUi.selectedDay || today;
+      const selInfo = dayMap[selDay];
+      document.getElementById('cal-detail-date').textContent = `${selDay} 学习详情${selDay === today ? '（今日）' : ''}`;
+      const badgeEl = document.getElementById('cal-detail-status-badge');
+      const metricsEl = document.getElementById('cal-detail-metrics');
+      const wordsEl = document.getElementById('cal-detail-words');
+
+      if (!selInfo || selInfo.practiced === 0) {
+        badgeEl.textContent = '未学习';
+        badgeEl.className = 'text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500';
+        metricsEl.innerHTML = '<span>当日无背词记录</span>';
+        wordsEl.innerHTML = '<span class="text-xs text-slate-400">点击日历上有数字的日期可查看当天背过的具体单词。</span>';
+      } else {
+        const goal = selInfo.target || 30;
+        const met = selInfo.practiced >= goal;
+        badgeEl.textContent = met ? '✅ 已达标' : '📘 学习中';
+        badgeEl.className = `text-xs font-bold px-2.5 py-0.5 rounded-full ${met ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'}`;
+        const totAns = (selInfo.correctCount || 0) + (selInfo.wrongCount || 0);
+        const acc = totAns > 0 ? Math.round((selInfo.correctCount / totAns) * 100) : null;
+        metricsEl.innerHTML = `
+          <span>总计 <strong class="text-slate-900">${selInfo.practiced}</strong> 词（目标 ${goal}）</span>
+          <span>新学 <strong class="text-indigo-700">${selInfo.newCount || 0}</strong></span>
+          <span>复习 <strong class="text-purple-700">${selInfo.reviewCount || 0}</strong></span>
+          ${acc !== null ? `<span>正确率 <strong class="text-emerald-700">${acc}%</strong></span>` : ''}
+        `;
+        const ws = selInfo.words || [];
+        if (ws.length === 0) {
+          wordsEl.innerHTML = '<span class="text-xs text-slate-400">仅保留当日总量统计。</span>';
+        } else {
+          wordsEl.innerHTML = ws.slice(0, 60).map(w => {
+            const sm = getStatusMeta(w.status);
+            return `<button type="button" data-cal-jump-id="${escapeHtml(w.id)}" class="cal-jump-word px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-700 transition-colors">${escapeHtml(w.word)} <span class="text-[10px] opacity-70">(${sm.label})</span></button>`;
+          }).join('') + (ws.length > 60 ? `<span class="text-xs text-slate-400 self-center">… 等共 ${ws.length} 词</span>` : '');
+        }
+      }
+    }
+
     function renderMistakesView() {
       const counts = {
         confused: state.words.filter(w => w.status === 'confused').length,
@@ -2380,6 +2828,26 @@ ${JSON.stringify(compactList)}
       if (remote.aiConfig && (remote.aiConfig.updatedAt || 0) > (state.aiConfig.updatedAt || 0)) {
         state.aiConfig = { ...state.aiConfig, ...remote.aiConfig };
       }
+      if (remote.dailyStats && typeof remote.dailyStats === 'object') {
+        state.dailyStats = state.dailyStats || {};
+        Object.entries(remote.dailyStats).forEach(([day, rs]) => {
+          if (!rs) return;
+          const ls = state.dailyStats[day];
+          if (!ls) {
+            state.dailyStats[day] = rs;
+          } else {
+            state.dailyStats[day] = {
+              practiced: Math.max(ls.practiced || 0, rs.practiced || 0),
+              newCount: Math.max(ls.newCount || 0, rs.newCount || 0),
+              reviewCount: Math.max(ls.reviewCount || 0, rs.reviewCount || 0),
+              correctCount: Math.max(ls.correctCount || 0, rs.correctCount || 0),
+              wrongCount: Math.max(ls.wrongCount || 0, rs.wrongCount || 0),
+              target: rs.target || ls.target || 30,
+              updatedAt: Math.max(ls.updatedAt || 0, rs.updatedAt || 0)
+            };
+          }
+        });
+      }
       if (Array.isArray(remote.wrongAnswerLogs) && remote.wrongAnswerLogs.length > 0) {
         const logMap = new Map();
         (state.wrongAnswerLogs || []).forEach(l => { if (l && l.id) logMap.set(l.id, l); });
@@ -2400,6 +2868,7 @@ ${JSON.stringify(compactList)}
         progressMap,
         customWords,
         aiConfig: state.aiConfig,
+        dailyStats: state.dailyStats || {},
         wrongAnswerLogs: (state.wrongAnswerLogs || []).slice(-2000)
       };
     }
@@ -2439,35 +2908,53 @@ ${JSON.stringify(compactList)}
         const baseUrl = `https://gitee.com/api/v5/repos/${owner}/${repo}/contents/${filePath}`;
 
         let existingSha = null;
+        let remoteFingerprint = null;
+        const fingerprintOf = obj => JSON.stringify({
+          dailyPlan: obj.dailyPlan,
+          progressMap: obj.progressMap,
+          customWords: obj.customWords,
+          aiConfig: obj.aiConfig,
+          dailyStats: obj.dailyStats,
+          wrongAnswerLogs: obj.wrongAnswerLogs
+        });
+
         const getRes = await fetch(`${baseUrl}?access_token=${encodeURIComponent(cfg.giteeToken)}&ref=${encodeURIComponent(branch)}`);
         if (getRes.ok) {
           const fileData = await getRes.json();
           if (fileData && !Array.isArray(fileData) && fileData.content) {
             existingSha = fileData.sha || null;
-            try { mergeRemotePayload(JSON.parse(base64ToUtf8(fileData.content))); } catch (e) {}
+            try {
+              const remoteObj = JSON.parse(base64ToUtf8(fileData.content));
+              remoteFingerprint = fingerprintOf(remoteObj);
+              mergeRemotePayload(remoteObj);
+            } catch (e) {}
           }
         } else if (getRes.status !== 404) {
           throw new Error('Gitee 读取失败: HTTP ' + getRes.status);
         }
 
-        const payloadStr = JSON.stringify(buildSyncPayload());
-        const bodyObj = {
-          access_token: cfg.giteeToken,
-          content: utf8ToBase64(payloadStr),
-          message: `LexiSync sync (${state.deviceName})`,
-          branch
-        };
-        if (existingSha) bodyObj.sha = existingSha;
+        const nextPayload = buildSyncPayload();
+        const localFingerprint = fingerprintOf(nextPayload);
+        // Skip pushing an empty duplicate commit if remote and local data are already identical!
+        if (!existingSha || remoteFingerprint !== localFingerprint) {
+          const bodyObj = {
+            access_token: cfg.giteeToken,
+            content: utf8ToBase64(JSON.stringify(nextPayload)),
+            message: `LexiSync sync (${state.deviceName})`,
+            branch
+          };
+          if (existingSha) bodyObj.sha = existingSha;
 
-        const writeRes = await fetch(baseUrl, {
-          method: existingSha ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bodyObj)
-        });
-        if (!writeRes.ok) {
-          let errMsg = 'HTTP ' + writeRes.status;
-          try { const ej = await writeRes.json(); if (ej?.message) errMsg += ' - ' + ej.message; } catch (e) {}
-          throw new Error('Gitee 写入失败: ' + errMsg);
+          const writeRes = await fetch(baseUrl, {
+            method: existingSha ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bodyObj)
+          });
+          if (!writeRes.ok) {
+            let errMsg = 'HTTP ' + writeRes.status;
+            try { const ej = await writeRes.json(); if (ej?.message) errMsg += ' - ' + ej.message; } catch (e) {}
+            throw new Error('Gitee 写入失败: ' + errMsg);
+          }
         }
 
         state.lastSyncAt = Date.now();
@@ -2575,10 +3062,22 @@ ${JSON.stringify(compactList)}
     function recordWordPracticeAndMaybeAutoSync(wordObj, score, userInput) {
       checkStudyDayRollover();
       const today = state.todayStudyDay;
-      if (!wordObj.firstStudiedDay) wordObj.firstStudiedDay = today;
+      const isBrandNewToday = !wordObj.firstStudiedDay;
+      if (isBrandNewToday) wordObj.firstStudiedDay = today;
       wordObj.lastStudiedDay = today;
       wordObj.studiedDays = Array.from(new Set([...(wordObj.studiedDays || []), today])).slice(-30);
       const srsInfo = applySrsSchedule(wordObj, score, userInput);
+
+      state.dailyStats = state.dailyStats || {};
+      const ds = state.dailyStats[today] || { practiced: 0, newCount: 0, reviewCount: 0, correctCount: 0, wrongCount: 0, target: Number(state.dailyPlan.dailyNewTarget) || 30, updatedAt: 0 };
+      ds.practiced = (ds.practiced || 0) + 1;
+      if (isBrandNewToday) ds.newCount = (ds.newCount || 0) + 1;
+      else ds.reviewCount = (ds.reviewCount || 0) + 1;
+      if (score >= 80) ds.correctCount = (ds.correctCount || 0) + 1;
+      else ds.wrongCount = (ds.wrongCount || 0) + 1;
+      ds.target = Number(state.dailyPlan.dailyNewTarget) || 30;
+      ds.updatedAt = Date.now();
+      state.dailyStats[today] = ds;
       wordObj.updatedAt = Date.now();
       state.todayCount += 1;
       state.unsyncedWordCount = (state.unsyncedWordCount || 0) + 1;
@@ -3264,6 +3763,116 @@ ${JSON.stringify(compactList)}
         } catch (err) {
           showToast(`测试失败：${err.message}`, 'error');
         }
+      });
+
+      // Learn Preview Mode Events
+      document.querySelectorAll('.learn-src-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          learnUi.source = btn.dataset.learnSrc;
+          if (learnUi.source === 'random' && !learnUi.randomIds.length) pickRandomLearnIds();
+          renderLearnView();
+          if (window.lucide) window.lucide.createIcons();
+        });
+      });
+
+      document.getElementById('learn-shuffle-btn').addEventListener('click', () => {
+        learnUi.source = 'random';
+        pickRandomLearnIds();
+        renderLearnView();
+        if (window.lucide) window.lucide.createIcons();
+        showToast('已随机抽取一批新词', 'info');
+      });
+
+      document.getElementById('learn-toggle-mask-btn').addEventListener('click', () => {
+        learnUi.maskMeaning = !learnUi.maskMeaning;
+        learnUi.revealedIds.clear();
+        renderLearnView();
+        if (window.lucide) window.lucide.createIcons();
+      });
+
+      document.getElementById('learn-batch-count').addEventListener('change', e => {
+        learnUi.count = parseInt(e.target.value, 10) || 20;
+        if (learnUi.source === 'random') pickRandomLearnIds();
+        renderLearnView();
+        if (window.lucide) window.lucide.createIcons();
+      });
+
+      document.getElementById('learn-show-details-toggle').addEventListener('change', e => {
+        learnUi.showDetails = e.target.checked;
+        renderLearnView();
+        if (window.lucide) window.lucide.createIcons();
+      });
+
+      document.getElementById('learn-cards-grid').addEventListener('click', e => {
+        const spk = e.target.closest('.learn-speak-btn');
+        if (spk) {
+          e.stopPropagation();
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(spk.dataset.speakWord);
+            u.lang = 'en-US'; u.rate = 0.92;
+            window.speechSynthesis.speak(u);
+          }
+          return;
+        }
+        const tst = e.target.closest('.learn-test-btn');
+        if (tst) {
+          e.stopPropagation();
+          state.studyMode = 'all';
+          state.currentWordId = tst.dataset.learnTestId;
+          state.activeTab = 'study';
+          saveState();
+          renderAll();
+          resetStudyCardInput();
+          return;
+        }
+        const card = e.target.closest('.learn-preview-card');
+        if (card && learnUi.maskMeaning) {
+          const cid = card.dataset.learnCardId;
+          if (learnUi.revealedIds.has(cid)) learnUi.revealedIds.delete(cid);
+          else learnUi.revealedIds.add(cid);
+          renderLearnView();
+          if (window.lucide) window.lucide.createIcons();
+        }
+      });
+
+      // Calendar Stats Events
+      document.getElementById('cal-prev-month-btn').addEventListener('click', () => {
+        statsUi.month -= 1;
+        if (statsUi.month < 1) { statsUi.month = 12; statsUi.year -= 1; }
+        renderStatsView();
+      });
+
+      document.getElementById('cal-next-month-btn').addEventListener('click', () => {
+        statsUi.month += 1;
+        if (statsUi.month > 12) { statsUi.month = 1; statsUi.year += 1; }
+        renderStatsView();
+      });
+
+      document.getElementById('stats-go-today-btn').addEventListener('click', () => {
+        const td = getBeijingStudyDay();
+        statsUi.year = parseInt(td.slice(0, 4), 10);
+        statsUi.month = parseInt(td.slice(5, 7), 10);
+        statsUi.selectedDay = td;
+        renderStatsView();
+      });
+
+      document.getElementById('cal-days-grid').addEventListener('click', e => {
+        const btn = e.target.closest('.cal-day-cell');
+        if (!btn) return;
+        statsUi.selectedDay = btn.dataset.calDay;
+        renderStatsView();
+      });
+
+      document.getElementById('cal-detail-words').addEventListener('click', e => {
+        const btn = e.target.closest('.cal-jump-word');
+        if (!btn) return;
+        state.studyMode = 'all';
+        state.currentWordId = btn.dataset.calJumpId;
+        state.activeTab = 'study';
+        saveState();
+        renderAll();
+        resetStudyCardInput();
       });
 
       document.getElementById('reset-demo-data-btn').addEventListener('click', () => {
